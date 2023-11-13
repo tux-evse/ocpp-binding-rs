@@ -1,0 +1,32 @@
+{
+    "name": "afb-rust",
+    "no-ldpaths": true,
+    "port": 1234,
+    "alias": [
+        "/devtools:/usr/share/afb-ui-devtools/binder"
+    ],
+    "ws-server": [
+        "unix:@OCPP-C"
+    ],
+    "monitoring": true,
+    "tracereq": "all",
+    "extension": [
+        {
+            "path": "/usr/local/redpesk/afb-ocpp/lib/libafb-ocpp-ext.so"
+        }
+    ],
+    "@extconfig": {
+        "OCPP": {
+            "ocpp-client": "ocpp.biastaging.com:80/23WH0NJGH0"
+        }
+    },
+    "binding": [
+        {
+            "uid": "ocpp-charger",
+            "api": "charger",
+            "station": "Tux-Basic",
+            "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
+            "info": "RUST OCPP-16 Charger client"
+        }
+    ]
+}

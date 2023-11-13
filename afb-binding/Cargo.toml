@@ -1,0 +1,19 @@
+[package]
+name = "ocpp-binding"
+version = "0.0.1"
+edition = "2021"
+authors = ["Fulup Le Foll <fulup@iot.bzh>"]
+publish = false
+
+[dependencies]
+afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
+serde = { version = "1.0", features = ["derive"] }
+serde_json={ version= "1.0"}
+libocpp= {path ="../ocpp-lib"}
+chrono = { version = "0.4", default-features = false, features = ["serde"] }
+
+
+[lib]
+name = "afb_ocpp"
+crate-type = ["cdylib"]
+path = "src/libso.rs"

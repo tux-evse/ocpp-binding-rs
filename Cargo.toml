@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "ocpp-lib",
+    "afb-binding",
+    "examples",
+]
+

@@ -1,0 +1,68 @@
+# libslac Iso15118-3 binding
+=============================
+
+## Provides
+
+* Rust implementation of libslac Iso15118-3
+* afb-binding micro service architecture and security model [api-v4](https://github.com/redpesk-common/afb-librust/blob/master/docs/1-architecture_presentation.md)
+
+## References
+
+Specification from OpenCharge Alliance https://www.openchargealliance.org/downloads
+
+* OCPP-1.6 ocpp-j-1.6-specification.pdf
+* OCPP-2.0.1 https://www.oasis-open.org/committees/download.php/70384/OCPP-2.0.1_part4_ocpp-j-specification.pdf
+
+This code is freely inspired from differences open-sources references:
+
+* NodeJs https://github.com/mikuso/ocpp-rpc
+* Python https://github.com/mobilityhouse/ocpp
+
+
+## Sample connecting Flow
+
+* Connect WS http/upgrade ocpp16|occp201
+   * provide adequate authentication (basic-auth, tls, ...)
+
+* Boot notification (charger -> backend)
+   * {"BootNotification",{"chargePointVendor":"Tux-EvSe","chargePointModel":"Dummy testing client"}}
+   * {"currentTime":"2023-09-29T11:42:31Z","interval":300,"status":"Accepted"}
+
+* Status notification (charger -> backend)
+  * {"StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Available"}}
+  * {}
+
+* Data transfert (charger -> backend)
+  * {"DataTransfert", {"vendorId":"Bia","data":"Bia Power Grid SL. This is an emulated charger"}}
+  * {"status":"Accepted","data":"Bia Power Grid SL. This is an emulated charger"}
+
+
+## testing server connectivity
+
+### AFB-client
+
+```
+# direct access to ocpp-backend
+afb-client -d unix:@OCPP-C
+ Heartbeat {}
+ Heartbeat-xxx {}
+
+# access through afb-ocpp-binding
+afb-client localhost:1234/api
+ Heartbeat {}
+```
+
+### startwireshark
+
+```
+su -c  "wireshark -i eth0 -k -S -f 'host ocpp.biastaging.com'"
+su -c  "wireshark -i lo -k -S -f 'port 9310'"
+afb-binder -vvv -x $BINDER/src/test-extensions/ocpp.so --ocpp-client ocpp.biastaging.com:80/23WH0NJH0
+```
+
+
+Fulup TBD
+----------
+
+ Voir pourquoi le boot notification ne passe pas. (input json du sample invalid)
+

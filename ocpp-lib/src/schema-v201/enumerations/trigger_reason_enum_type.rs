@@ -1,0 +1,25 @@
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Default)]
+pub enum TriggerReasonEnumType {
+    #[default]
+    Authorized,
+    CablePluggedIn,
+    ChargingRateChanged,
+    ChargingStateChanged,
+    Deauthorized,
+    EnergyLimitReached,
+    EVCommunicationLost,
+    EVConnectTimeout,
+    MeterValueClock,
+    MeterValuePeriodic,
+    TimeLimitReached,
+    Trigger,
+    UnlockCommand,
+    StopAuthorized,
+    EVDeparted,
+    EVDetected,
+    RemoteStop,
+    RemoteStart,
+    AbnormalCondition,
+    SignedDataReceived,
+    ResetCommand,
+}
