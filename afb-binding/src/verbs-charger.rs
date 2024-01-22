@@ -12,7 +12,7 @@
 
 use crate::prelude::*;
 use afbv4::prelude::*;
-use libocpp::{prelude::*, v106::Authorize};
+use ocpp::prelude::*;
 
 struct HeartbeatCtxData {
     count: u32,
@@ -23,15 +23,20 @@ fn heartbeat_cb(
     args: &AfbData,
     ctx: &mut HeartbeatCtxData,
 ) -> Result<(), AfbError> {
-
-    let data= args.get::<&v106::Heartbeat>(0)?;
+    let data = args.get::<&v106::Heartbeat>(0)?;
     match data {
         v106::Heartbeat::Response(response) => {
-            afb_log_msg!(Debug, rqt, "OCCP-16 Heartbeat count={} {:?}", ctx.count, &response);
+            afb_log_msg!(
+                Debug,
+                rqt,
+                "OCCP-16 Heartbeat count={} {:?}",
+                ctx.count,
+                &response
+            );
             rqt.reply(data.clone(), 0);
         }
         v106::Heartbeat::Request(_request) => {
-            ctx.count= ctx.count +1;
+            ctx.count = ctx.count + 1;
             afb_log_msg!(Debug, rqt, "OCCP-16 Heartbeat count={} Request", ctx.count);
             match AfbSubCall::call_async(
                 rqt,
@@ -92,18 +97,12 @@ fn authorize_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
             )?;
         }
         v106::Authorize::Response(response) => {
-            afb_log_msg!(
-                Debug,
-                rqt,
-                "Got a authorize response {:?}",
-                response
-            );
+            afb_log_msg!(Debug, rqt, "Got a authorize response {:?}", response);
             rqt.reply(data.clone(), 0);
         }
     }
     Ok(())
 }
-
 
 AfbVerbRegister!(StatusNotificationVerb, status_notification);
 fn status_notification(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
@@ -187,7 +186,7 @@ fn stop_transaction_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError>
 // 6.49. StopTransaction.req
 
 AfbEventRegister!(EventGetCtrl, event_get_callback);
-fn event_get_callback(event: &AfbEventMsg, args: &AfbData) {
+fn event_get_callback(event: &AfbEventMsg, args: &AfbData) -> Result<(), AfbError> {
     // check request introspection
     let evt_uid = event.get_uid();
     let evt_name = event.get_name();
@@ -202,37 +201,13 @@ fn event_get_callback(event: &AfbEventMsg, args: &AfbData) {
         api_uid
     );
 
-    match args.get::<JsoncObj>(0) {
-        Ok(argument) => {
-            afb_log_msg!(Info, event, "Got valid jsonc object argument={}", argument);
-            argument
-        }
-        Err(error) => {
-            afb_log_msg!(Error, event, "hoop invalid json argument {}", error);
-            JsoncObj::from("invalid json input argument")
-        }
-    };
+    let argument = args.get::<JsoncObj>(0)?;
+    afb_log_msg!(Info, event, "Got valid jsonc object argument={}", argument);
+
+    Ok(())
 }
 
-pub struct ApiUserData {}
-impl AfbApiControls for ApiUserData {
-
-    // the API is created and ready. At this level user may subcall api(s) declare as dependencies
-    fn start(&mut self, api: &AfbApi) ->  Result<(),AfbError> {
-
-        // register to monitoring event
-        AfbSubCall::call_sync(api, "monitor", "subscribe", "disconnected") ?;
-
-        Ok(())
-    }
-
-    // mandatory for downcasting back to custom apidata object
-    fn as_any(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-pub(crate) fn register_charger(api: &mut AfbApi, _config: ChargerConfig) -> Result<(), AfbError> {
+pub(crate) fn register_charger(api: &mut AfbApi, _config: &BindingConfig) -> Result<(), AfbError> {
     let authorize = AfbVerb::new("Authorize")
         .set_callback(Box::new(AuthorizeVerb {}))
         .set_info("Request authorize config from backend")
@@ -296,7 +271,6 @@ pub(crate) fn register_charger(api: &mut AfbApi, _config: ChargerConfig) -> Resu
     api.add_evt_handler(websock_handler);
     api.add_verb(stop_transaction);
     api.add_verb(heartbeat);
-    api.set_callback(Box::new(ApiUserData {}));
 
     Ok(())
 }

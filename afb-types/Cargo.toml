@@ -1,5 +1,5 @@
 [package]
-name = "ocpp-binding"
+name = "typesv4"
 version = "0.0.1"
 edition = "2021"
 authors = ["Fulup Le Foll <fulup@iot.bzh>"]
@@ -9,13 +9,9 @@ build = "etc/build.rs"
 [dependencies]
 afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
 serde = { version = "1.0", features = ["derive"] }
-chrono = { version = "0.4", default-features = false }
 serde_json={ version= "1.0"}
-ocpp= {path ="../ocpp-lib"}
-typesv4= {path ="../afb-types"}
-
 
 [lib]
-name = "afb_ocpp"
-crate-type = ["cdylib"]
+name = "typesv4"
+crate-type = ["lib"]
 path = "src/libso.rs"

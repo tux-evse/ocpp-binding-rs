@@ -1,2 +1,0 @@
-/// validators
-pub mod validator;

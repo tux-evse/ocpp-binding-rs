@@ -10,9 +10,12 @@
  *
  */
 
-use chrono::Utc;
+use crate::prelude::*;
 use afbv4::prelude::*;
-use libocpp::{prelude::*, v106::AvailabilityType};
+use chrono::Utc;
+use ocpp::prelude::*;
+use std::time::Duration;
+use typesv4::prelude::*;
 
 struct HeartbeatCtxData {
     count: u32,
@@ -42,19 +45,80 @@ fn heartbeat_cb(
     Ok(())
 }
 
-AfbVerbRegister!(CancelReservationVerb, cancel_notification_cb);
-fn cancel_notification_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+struct CancelReservationCtx {
+    chmgr_api: &'static str,
+}
+AfbVerbRegister!(
+    CancelReservationVerb,
+    cancel_notification_cb,
+    CancelReservationCtx
+);
+fn cancel_notification_cb(
+    rqt: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut CancelReservationCtx,
+) -> Result<(), AfbError> {
     let data = args.get::<&v106::CancelReservation>(0)?;
     match data {
         v106::CancelReservation::Request(value) => {
             afb_log_msg!(Debug, rqt, "Backend cancel reservation{:?}", value);
-            let id = value.reservation_id;
 
-            // Fulup TBD Do something status: Accepted|Rejected
-            let response= v106::CancelReservationResponse {status:v106::CancelReservationStatus::Accepted};
+            let reservation = ReservationSession {
+                id: value.reservation_id,
+                tagid: String::new(),
+                start: Duration::new(0, 0),
+                stop: Duration::new(0, 0),
+                status: ReservationStatus::Cancel,
+            };
+
+            let status = match AfbSubCall::call_sync(rqt, ctx.chmgr_api, "reserve", reservation) {
+                Ok(_value) => v106::CancelReservationStatus::Accepted,
+                Err(_error) => v106::CancelReservationStatus::Rejected,
+            };
+
+            let response = v106::CancelReservationResponse { status };
             rqt.reply(v106::CancelReservation::Response(response), 0);
         }
         v106::CancelReservation::Response(value) => {
+            afb_log_msg!(Warning, rqt, "Ignore status_notification data {:?}", value);
+            rqt.reply(AFB_NO_DATA, -1);
+        }
+    }
+    Ok(())
+}
+
+// 6.37. ReserveNow.req
+struct ReserveNowCtx {
+    chmgr_api: &'static str,
+}
+AfbVerbRegister!(ReserveNowVerb, reverve_now_cb, ReserveNowCtx);
+fn reverve_now_cb(
+    rqt: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut ReserveNowCtx,
+) -> Result<(), AfbError> {
+    let data = args.get::<&v106::ReserveNow>(0)?;
+    match data {
+        v106::ReserveNow::Request(value) => {
+            afb_log_msg!(Debug, rqt, "Backend reserve now {:?}", value);
+
+            let reservation = ReservationSession {
+                id: value.reservation_id,
+                tagid: value.id_tag.clone(),
+                start: Duration::new(0, 0),
+                stop: now_to_duration(value.expiry_date)?,
+                status: ReservationStatus::Pending,
+            };
+
+            let status = match AfbSubCall::call_sync(rqt, ctx.chmgr_api, "reserve", reservation) {
+                Ok(_value) => v106::ReservationStatus::Accepted,
+                Err(_error) => v106::ReservationStatus::Rejected,
+            };
+
+            let response = v106::ReserveNowResponse { status };
+            rqt.reply(v106::ReserveNow::Response(response), 0);
+        }
+        v106::ReserveNow::Response(value) => {
             afb_log_msg!(Warning, rqt, "Ignore status_notification data {:?}", value);
             rqt.reply(AFB_NO_DATA, -1);
         }
@@ -70,12 +134,14 @@ fn change_availability_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbErr
             afb_log_msg!(Debug, rqt, "Backend cancel reservation{:?}", value);
             let _id = value.connector_id;
             match &value.kind {
-                    AvailabilityType::Operative => {},
-                    AvailabilityType::Inoperative => {},
+                v106::AvailabilityType::Operative => {}
+                v106::AvailabilityType::Inoperative => {}
             }
 
             // Fulup TBD Do something status= Accepted|Rejected|Scheduled
-            let response= v106::ChangeAvailabilityResponse {status:v106::AvailabilityStatus::Accepted};
+            let response = v106::ChangeAvailabilityResponse {
+                status: v106::AvailabilityStatus::Accepted,
+            };
             rqt.reply(v106::ChangeAvailability::Response(response), 0);
         }
         v106::ChangeAvailability::Response(value) => {
@@ -94,7 +160,9 @@ fn reset_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
             afb_log_msg!(Debug, rqt, "Backend reset {:?}", value);
 
             // Fulup TBD Do something status= Accepted|Rejected|Scheduled
-            let response= v106::ResetResponse {status:v106::ResetResponseStatus::Accepted};
+            let response = v106::ResetResponse {
+                status: v106::ResetResponseStatus::Accepted,
+            };
             rqt.reply(v106::Reset::Response(response), 0);
         }
         v106::Reset::Response(value) => {
@@ -115,7 +183,6 @@ fn reset_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
 // 6.25. GetDiagnostics.req
 // 6.27. GetLocalListVersion.req
 // 6.33. RemoteStartTransaction.req
-// 6.37. ReserveNow.req
 // 6.39. Reset.req
 // 6.41. SendLocalList.req
 // 6.43. SetChargingProfile.req
@@ -123,10 +190,19 @@ fn reset_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
 // 6.53. UnlockConnector.req
 // 6.55. UpdateFirmware.req
 
-pub(crate) fn register_backend(api: &mut AfbApi) -> Result<(), AfbError> {
-    let newstate = AfbVerb::new("CancelReservation")
-        .set_callback(Box::new(CancelReservationVerb {}))
+pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
+    let cancel_resa = AfbVerb::new("CancelReservation")
+        .set_callback(Box::new(CancelReservationVerb {
+            chmgr_api: config.chmgr_api,
+        }))
         .set_info("backend cancel reservation")
+        .finalize()?;
+
+    let reserve_now = AfbVerb::new("ReserveNow")
+        .set_callback(Box::new(ReserveNowCtx {
+            chmgr_api: config.chmgr_api,
+        }))
+        .set_info("backend charger reservation")
         .finalize()?;
 
     let reset = AfbVerb::new("Reset")
@@ -134,7 +210,8 @@ pub(crate) fn register_backend(api: &mut AfbApi) -> Result<(), AfbError> {
         .set_info("backend request charger reset")
         .finalize()?;
 
-    api.add_verb(newstate);
+    api.add_verb(cancel_resa);
+    api.add_verb(reserve_now);
     api.add_verb(reset);
 
     Ok(())

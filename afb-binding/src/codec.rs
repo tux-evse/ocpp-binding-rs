@@ -11,7 +11,7 @@
  */
 
 use afbv4::prelude::*;
-use libocpp::prelude::*;
+use ocpp::prelude::*;
 
 use v106::messages::{
     authorize::AuthorizeRequest, authorize::AuthorizeResponse,

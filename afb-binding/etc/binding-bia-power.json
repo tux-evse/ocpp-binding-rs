@@ -12,7 +12,7 @@
     "tracereq": "all",
     "extension": [
         {
-            "path": "/usr/redpesk/ocpp-binding-rs/lib/libafb-ocpp-ext.so"
+            "path": "/usr/local/redpesk/afb-ocpp/lib/libafb-ocpp-ext.so"
         }
     ],
     "@extconfig": {
@@ -24,8 +24,8 @@
         {
             "uid": "ocpp-charger",
             "api": "charger",
-            "station": "Tux-Basic",
-            "path": "/usr/redpesk/ocpp-binding-rs/lib/libafb_ocpp.so",
+            "station": "Tux-Charger-01",
+            "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
             "info": "RUST OCPP-16 Charger client"
         }
     ]

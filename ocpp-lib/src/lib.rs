@@ -33,6 +33,9 @@ pub mod v106;
 #[path = "enums-v201.rs"]
 pub mod v201;
 
+#[path = "ocpp-utils.rs"]
+pub mod utils;
+
 // #[path = "schema-v106/mod.rs"]
 // pub mod v106;
 
@@ -43,5 +46,5 @@ pub mod v201;
 pub mod prelude {
     pub use crate::v106;
     pub use crate::v201;
-    //pub use crate::msg::*;
+    pub use crate::utils::*;
 }

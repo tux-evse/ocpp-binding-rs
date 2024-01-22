@@ -7,7 +7,7 @@ authors = ["fulup@iot.bzh"]
 afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
 serde = { version = "1.0", features = ["derive"] }
 serde_json={ version= "1.0"}
-libocpp= {path ="../ocpp-lib"}
+ocpp= {path ="../ocpp-lib"}
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 
 [[example]]

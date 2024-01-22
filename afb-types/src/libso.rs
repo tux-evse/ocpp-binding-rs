@@ -18,17 +18,25 @@
 #[cfg(not(afbv4))]
 extern crate afbv4;
 
-#[path = "verbs-charger.rs"]
-mod charger;
+#[path = "chmgr-types.rs"]
+mod chmgr;
 
-#[path = "verbs-backend.rs"]
-mod backend;
+#[path = "am62x-types.rs"]
+mod am62x;
 
-#[path = "binding.rs"]
-mod binding;
+#[path = "engy-types.rs"]
+mod engy;
 
-pub(crate) mod prelude {
-    pub(crate) use crate::backend::*;
-    pub(crate) use crate::charger::*;
-    pub(crate) use crate::binding::*;
+#[path = "slac-types.rs"]
+mod slac;
+
+#[path = "auth-types.rs"]
+mod auth;
+
+pub mod prelude {
+    pub use crate::chmgr::*;
+    pub use crate::am62x::*;
+    pub use crate::engy::*;
+    pub use crate::slac::*;
+    pub use crate::auth::*;
 }

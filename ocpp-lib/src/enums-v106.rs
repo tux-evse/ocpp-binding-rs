@@ -76,10 +76,12 @@ pub type CancelReservationStatus= types::CancelReservationStatus;
 pub type AvailabilityType= types::AvailabilityType;
 pub type AvailabilityStatus= types::AvailabilityStatus;
 pub type ResetResponseStatus= types::ResetResponseStatus;
+pub type ReservationStatus= types::ReservationStatus;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum RemoteStopTransaction {
+    // ok
     Request(RemoteStopTransactionRequest),
     Response(RemoteStopTransactionResponse),
 }
@@ -87,6 +89,7 @@ pub enum RemoteStopTransaction {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum RemoteStartTransaction {
+    // ok
     Request(RemoteStartTransactionRequest),
     Response(RemoteStartTransactionResponse),
 }
@@ -94,6 +97,7 @@ pub enum RemoteStartTransaction {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum GetDiagnostics {
+    // non
     Request(GetDiagnosticsRequest),
     Response(GetDiagnosticsResponse),
 }
@@ -215,6 +219,7 @@ pub enum Heartbeat {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum MeterValues {
+    // https://www.ampcontrol.io/ocpp-guide/how-to-send-ocpp-meter-values-with-metervalues-req
     Request(MeterValuesRequest),
     Response(MeterValuesResponse),
 }
@@ -222,6 +227,7 @@ pub enum MeterValues {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum ReserveNow {
+    // OK
     Request(ReserveNowRequest),
     Response(ReserveNowResponse),
 }
@@ -229,6 +235,7 @@ pub enum ReserveNow {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum Reset {
+    // Non
     Request(ResetRequest),
     Response(ResetResponse),
 }
@@ -243,6 +250,7 @@ pub enum SendLocalList {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum SetChargingProfile {
+    //https://www.ampcontrol.io/post/how-to-send-ev-charging-profiles-to-your-open-charge-point-protocol-ocpp-charging-station
     Request(SetChargingProfileRequest),
     Response(SetChargingProfileResponse),
 }
@@ -285,6 +293,7 @@ AfbDataConverter!(change_availability, ChangeAvailability);
 AfbDataConverter!(remote_start_transaction, RemoteStartTransaction);
 AfbDataConverter!(remote_stop_transaction, RemoteStopTransaction);
 AfbDataConverter!(remote_reset, Reset);
+AfbDataConverter!(reserve_now, ReserveNow);
 
 pub fn register_datatype() -> Result<(),AfbError> {
     // Custom type should be registered at binding startup time
@@ -297,5 +306,6 @@ pub fn register_datatype() -> Result<(),AfbError> {
    remote_start_transaction::register()?;
    remote_stop_transaction::register()?;
    remote_reset::register()?;
+   reserve_now::register()?;
    Ok(())
 }
