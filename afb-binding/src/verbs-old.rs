@@ -14,6 +14,24 @@ use crate::prelude::*;
 use afbv4::prelude::*;
 use ocpp::prelude::*;
 
+struct TimerCtx {
+    apiv4: AfbApiV4,
+}
+// ping server every tic-ms to keep ocpp connection live
+AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
+fn timer_cb(
+    _timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx
+) -> Result<(), AfbError> {
+
+    AfbSubCall::call_sync(
+                ctx.apiv4,
+                "OCPP-C",
+                "Heartbeat",
+                v106::Heartbeat::Request(v106::HeartbeatRequest{}),
+            )?;
+    Ok(())
+}
+
 struct HeartbeatCtxData {
     count: u32,
 }
@@ -41,7 +59,7 @@ fn heartbeat_cb(
             match AfbSubCall::call_async(
                 rqt,
                 "OCPP-C",
-                "Heartbeat-xxx",
+                "Heartbeat",
                 data.clone(),
                 Box::new(HeartbeatCtxData { count: ctx.count }),
             ) {
@@ -207,7 +225,16 @@ fn event_get_callback(event: &AfbEventMsg, args: &AfbData) -> Result<(), AfbErro
     Ok(())
 }
 
-pub(crate) fn register_charger(api: &mut AfbApi, _config: &BindingConfig) -> Result<(), AfbError> {
+pub(crate) fn register_frontend(rootapi: AfbApiV4, api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
+
+    AfbTimer::new("tic-timer")
+        .set_period(config.tic)
+        .set_decount(0)
+        .set_callback(Box::new(TimerCtx {
+            apiv4: rootapi,
+        }))
+        .start()?;
+
     let authorize = AfbVerb::new("Authorize")
         .set_callback(Box::new(AuthorizeVerb {}))
         .set_info("Request authorize config from backend")

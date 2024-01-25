@@ -22,11 +22,14 @@
     },
     "binding": [
         {
-            "uid": "ocpp-charger",
-            "api": "charger",
-            "station": "Tux-Charger-01",
+            "uid": "ocpp-frontend",
+            "api": "frontend",
+            "station": "Tux-frontend-01",
             "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
-            "info": "RUST OCPP-16 Charger client"
+            "info": "RUST OCPP-16 frontend client",
+            "tic": 5000,
+            "chmgr_api": "chmgr",
+            "engy_api": "engy",
         }
     ]
 }

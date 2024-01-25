@@ -12,31 +12,44 @@
 
 use afbv4::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
-
-AfbDataConverter!(ocpp_msg, OcppReservedStatus);
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-#[serde(rename_all = "lowercase")]
-pub enum OcppReservedStatus {
-    Accepted,
-    Refused,
-    Unset,
-}
-
-AfbDataConverter!(ocpp_state, OcppReserved);
+AfbDataConverter!(ocpp_msg, OcppMsg);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
-pub struct OcppReserved {
-    pub id: i64,
-    pub tagid:String,
-    pub start: Duration,
-    pub stop:  Duration,
-    pub status: OcppReservedStatus,
+pub enum OcppMsg {
+    Initialized,
 }
 
+AfbDataConverter!(ocpp_transaction, OcppTransaction);
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum OcppTransaction {
+    Start(String),
+    Stop(i32),
+}
+
+AfbDataConverter!(ocpp_state, OcppState);
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub struct OcppState {
+    pub connector_id: u32,
+    pub tid: i32,
+    pub authorized: bool,
+}
+
+impl OcppState {
+    pub fn default() -> Self {
+        OcppState {
+            connector_id:0,
+            tid: 0,
+            authorized: false,
+        }
+    }
+}
 
 pub fn ocpp_registers() -> Result<(),AfbError> {
     ocpp_msg::register()?;
+    ocpp_state::register()?;
+    ocpp_transaction::register()?;
     Ok(())
 }

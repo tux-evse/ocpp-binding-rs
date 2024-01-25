@@ -20,12 +20,13 @@
 
   "binding": [
     {
-        "uid": "ocpp-charger",
-        "api": "charger",
+        "uid": "ocpp-frontend",
+        "api": "frontend",
         "station": "Tux-EvSE",
         "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
-        "info": "RUST OCPP-16 Charger client",
+        "info": "RUST OCPP-16 frontend client",
         "chmgr_api": "chmgr",
+        "engy_api": "engy",
     }
   ]
 }

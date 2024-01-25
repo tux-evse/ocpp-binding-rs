@@ -33,18 +33,17 @@ pub mod v106;
 #[path = "enums-v201.rs"]
 pub mod v201;
 
-#[path = "ocpp-utils.rs"]
+#[path = "manager.rs"]
+pub mod manager;
+
+#[path = "utils.rs"]
 pub mod utils;
 
-// #[path = "schema-v106/mod.rs"]
-// pub mod v106;
-
-// #[path = "schema-v201/mod.rs"]
-// pub mod v201;
 
 // export to external crate restricted to session APIs
 pub mod prelude {
     pub use crate::v106;
     pub use crate::v201;
+    pub use crate::manager::*;
     pub use crate::utils::*;
 }

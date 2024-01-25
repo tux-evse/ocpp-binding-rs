@@ -24,17 +24,17 @@ This code is freely inspired from differences open-sources references:
 * Connect WS http/upgrade ocpp16|occp201
    * provide adequate authentication (basic-auth, tls, ...)
 
-* Boot notification (charger -> backend)
+* Boot notification (frontend -> backend)
    * {"BootNotification",{"chargePointVendor":"Tux-EvSe","chargePointModel":"Dummy testing client"}}
    * {"currentTime":"2023-09-29T11:42:31Z","interval":300,"status":"Accepted"}
 
-* Status notification (charger -> backend)
+* Status notification (frontend -> backend)
   * {"StatusNotification",{"connectorId":1,"errorCode":"NoError","status":"Available"}}
   * {}
 
-* Data transfert (charger -> backend)
-  * {"DataTransfert", {"vendorId":"Bia","data":"Bia Power Grid SL. This is an emulated charger"}}
-  * {"status":"Accepted","data":"Bia Power Grid SL. This is an emulated charger"}
+* Data transfert (frontend -> backend)
+  * {"DataTransfert", {"vendorId":"Bia","data":"Bia Power Grid SL. This is an emulated frontend"}}
+  * {"status":"Accepted","data":"Bia Power Grid SL. This is an emulated frontend"}
 
 
 ## testing server connectivity

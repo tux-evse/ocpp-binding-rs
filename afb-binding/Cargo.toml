@@ -9,7 +9,6 @@ build = "etc/build.rs"
 [dependencies]
 afbv4 = {git= "https://github.com/redpesk-common/afb-librust", branch="master", optional = true}
 serde = { version = "1.0", features = ["derive"] }
-chrono = { version = "0.4", default-features = false }
 serde_json={ version= "1.0"}
 ocpp= {path ="../ocpp-lib"}
 typesv4= {path ="../afb-types"}

@@ -18,8 +18,8 @@
 #[cfg(not(afbv4))]
 extern crate afbv4;
 
-#[path = "verbs-charger.rs"]
-mod charger;
+#[path = "verbs-frontend.rs"]
+mod frontend;
 
 #[path = "verbs-backend.rs"]
 mod backend;
@@ -29,6 +29,6 @@ mod binding;
 
 pub(crate) mod prelude {
     pub(crate) use crate::backend::*;
-    pub(crate) use crate::charger::*;
+    pub(crate) use crate::frontend::*;
     pub(crate) use crate::binding::*;
 }

@@ -12,7 +12,6 @@
 
 use crate::prelude::*;
 use afbv4::prelude::*;
-use chrono::Utc;
 use ocpp::prelude::*;
 use std::time::Duration;
 use typesv4::prelude::*;
@@ -33,7 +32,7 @@ fn heartbeat_cb(
             ctx.count = ctx.count + 1;
             afb_log_msg!(Debug, rqt, "Heartbeat count:{}", ctx.count);
             let data = v106::Heartbeat::Response(v106::HeartbeatResponse {
-                current_time: Utc::now(),
+                current_time: get_utc(),
             });
             rqt.reply(data, 0);
         }
@@ -202,12 +201,12 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
         .set_callback(Box::new(ReserveNowCtx {
             chmgr_api: config.chmgr_api,
         }))
-        .set_info("backend charger reservation")
+        .set_info("backend frontend reservation")
         .finalize()?;
 
     let reset = AfbVerb::new("Reset")
         .set_callback(Box::new(ResetVerb {}))
-        .set_info("backend request charger reset")
+        .set_info("backend request frontend reset")
         .finalize()?;
 
     api.add_verb(cancel_resa);

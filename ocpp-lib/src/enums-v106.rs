@@ -77,6 +77,12 @@ pub type AvailabilityType= types::AvailabilityType;
 pub type AvailabilityStatus= types::AvailabilityStatus;
 pub type ResetResponseStatus= types::ResetResponseStatus;
 pub type ReservationStatus= types::ReservationStatus;
+pub type AuthorizationStatus= types::AuthorizationStatus;
+pub type SampledValue= types::SampledValue;
+pub type MeterValue= types::MeterValue;
+pub type UnitOfMeasure= types::UnitOfMeasure;
+pub type Measurand= types::Measurand;
+
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
@@ -137,7 +143,7 @@ pub enum StopTransaction {
     Response(StopTransactionResponse),
 }
 
-// charger -> backend OCPP-1.6 Authorize.req(p60/#6.1) Authorize.conf(6.2)
+// frontend -> backend OCPP-1.6 Authorize.req(p60/#6.1) Authorize.conf(6.2)
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
 #[serde(untagged)]
 pub enum Authorize {
@@ -292,8 +298,11 @@ AfbDataConverter!(cancel_reservation, CancelReservation);
 AfbDataConverter!(change_availability, ChangeAvailability);
 AfbDataConverter!(remote_start_transaction, RemoteStartTransaction);
 AfbDataConverter!(remote_stop_transaction, RemoteStopTransaction);
+AfbDataConverter!(start_transaction, StartTransaction);
+AfbDataConverter!(stop_transaction, StopTransaction);
 AfbDataConverter!(remote_reset, Reset);
 AfbDataConverter!(reserve_now, ReserveNow);
+AfbDataConverter!(meter_values, MeterValues);
 
 pub fn register_datatype() -> Result<(),AfbError> {
     // Custom type should be registered at binding startup time
@@ -305,7 +314,10 @@ pub fn register_datatype() -> Result<(),AfbError> {
    change_availability::register()?;
    remote_start_transaction::register()?;
    remote_stop_transaction::register()?;
+   start_transaction::register()?;
+   stop_transaction::register()?;
    remote_reset::register()?;
    reserve_now::register()?;
+   meter_values::register()?;
    Ok(())
 }
