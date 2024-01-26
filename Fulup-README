@@ -64,5 +64,4 @@ afb-binder -vvv -x $BINDER/src/test-extensions/ocpp.so --ocpp-client ocpp.biasta
 Fulup TBD
 ----------
 
- Voir pourquoi le boot notification ne passe pas. (input json du sample invalid)
-
+Si API="" ne pas faire les souscriptions.

@@ -5,6 +5,6 @@ members = [
     "ocpp-lib",
     "afb-binding",
     "afb-types",
-    "examples",
+    "afb-test",
 ]
 

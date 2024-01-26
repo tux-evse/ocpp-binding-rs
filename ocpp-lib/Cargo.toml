@@ -15,7 +15,6 @@ serde_json={ version= "1.0"}
 chrono = { version = "0.4", default-features = false, features = ["serde","now"] }
 typesv4= {path ="../afb-types"}
 
-
 [lib]
 name = "ocpp"
 crate-type = ["lib"]
