@@ -18,6 +18,7 @@ AfbDataConverter!(ocpp_msg, OcppMsg);
 #[serde(rename_all = "lowercase")]
 pub enum OcppMsg {
     Initialized,
+    Unknown,
 }
 
 AfbDataConverter!(ocpp_transaction, OcppTransaction);

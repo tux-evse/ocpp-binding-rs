@@ -13,5 +13,6 @@ fi
 # start binder with test config
 afb-binder -v \
    --config=afb-binding/etc/binder-ocpp.json \
-   --config=afb-binding/etc/binding-maeve-csms.json \
+   --config=afb-test/etc/binding-bia-power.json \
+   --config=afb-test/etc/binding-test-ocpp-16.json \
    $*

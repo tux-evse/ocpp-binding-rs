@@ -15,15 +15,10 @@ use afbv4::prelude::*;
 use ocpp::prelude::*;
 use typesv4::prelude::*;
 
-pub(crate) fn to_static_str(value: String) -> &'static str {
-    Box::leak(value.into_boxed_str())
-}
-
 pub struct BindingConfig {
     pub chmgr_api: &'static str,
     pub engy_api: &'static str,
     pub station: &'static str,
-    pub tic: u32,
     pub mgr: &'static ManagerHandle,
     pub cid: u32,
 }
@@ -32,12 +27,13 @@ pub struct ApiUserData {
     pub mgr: &'static ManagerHandle,
     pub station: &'static str,
     pub evt: &'static AfbEvent,
+    pub tic: u32,
 }
 
 impl AfbApiControls for ApiUserData {
     // the API is created and ready. At this level user may subcall api(s) declare as dependencies
     fn start(&mut self, api: &AfbApi) -> Result<(), AfbError> {
-        ocpp_bootstrap(api, self.station)?;
+        ocpp_bootstrap(api, self.station, self.tic)?;
         self.evt.push (OcppMsg::Initialized);
         Ok(())
     }
@@ -53,35 +49,14 @@ impl AfbApiControls for ApiUserData {
 pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi, AfbError> {
     afb_log_msg!(Info, rootv4, "config:{}", jconf);
 
-    let uid = if let Ok(value) = jconf.get::<String>("uid") {
-        to_static_str(value)
-    } else {
-        "ocpp"
-    };
-
-    let api = if let Ok(value) = jconf.get::<String>("api") {
-        to_static_str(value)
-    } else {
-        uid
-    };
-
-    let info = if let Ok(value) = jconf.get::<String>("info") {
-        to_static_str(value)
-    } else {
-        ""
-    };
-
-    let cid = if let Ok(value) = jconf.get::<u32>("cid") {
-        value
-    } else {
-        0
-    };
-
-    let tic = jconf.get::<u32>("tic")?;
-    let station = to_static_str(jconf.get::<String>("station")?);
-    let chmgr_api = to_static_str(jconf.get::<String>("chmgr_api")?);
-    let engy_api = to_static_str(jconf.get::<String>("engy_api")?);
-
+    let uid =  jconf.default::<&'static str>("uid", "ocpp-16")?;
+    let api =  jconf.default::<&'static str>("api", uid)?;
+    let info =  jconf.default::<&'static str>("info", "")?;
+    let cid =  jconf.default::<u32>("cid",1)?;
+    let tic = jconf.default::<u32>("tic",0)?;
+    let station = jconf.default::<&'static str>("station","tux-evse")?;
+    let chmgr_api = jconf.default::<&'static str>("chmgr_api", "")?;
+    let engy_api = jconf.default::<&'static str>("engy_api", "")?;
 
     // register data converter
     v106::register_datatype()?;
@@ -91,16 +66,14 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
 
     // create occp manager
     let evt = AfbEvent::new("msg");
-    let mgr = ManagerHandle::new(cid, evt, chmgr_api);
+    let mgr = ManagerHandle::new(rootv4, cid, evt, chmgr_api);
     let config = BindingConfig {
         station,
         chmgr_api,
         engy_api,
-        tic,
         mgr,
         cid,
     };
-
 
     // create backend API (OCPP upercase is impose by transport extension)
     let backend = AfbApi::new("OCPP").set_info(info);
@@ -110,9 +83,9 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     let frontend = AfbApi::new(api)
         .set_info(info)
         .add_event(evt)
-        .set_callback(Box::new(ApiUserData { mgr, station, evt }));
+        .set_callback(Box::new(ApiUserData { mgr, station, evt, tic }));
 
-    register_frontend(rootv4, frontend, &config)?;
+    register_frontend(frontend, &config)?;
 
     // if acls set apply them
     if let Ok(value) = jconf.get::<String>("permission") {

@@ -16,7 +16,7 @@ use ocpp::prelude::*;
 use typesv4::prelude::*;
 
 // init ocpp backend at API initialization time
-pub fn ocpp_bootstrap(api: &AfbApi, station: &str) -> Result<(), AfbError> {
+pub fn ocpp_bootstrap(api: &AfbApi, station: &str, tic: u32) -> Result<(), AfbError> {
     AfbSubCall::call_sync(
         api,
         "OCPP-C",
@@ -48,13 +48,30 @@ pub fn ocpp_bootstrap(api: &AfbApi, station: &str) -> Result<(), AfbError> {
             vendor_error_code: None,
         }),
     )?;
+
+    AfbSubCall::call_sync(
+        api,
+        "OCPP-C",
+        "Heartbeat",
+        v106::Heartbeat::Request(v106::HeartbeatRequest {}),
+    )?;
+
+    if tic > 0 {
+        AfbTimer::new("tic-timer")
+            .set_period(tic)
+            .set_decount(0)
+            .set_callback(Box::new(TimerCtx {
+                apiv4: api.get_apiv4(),
+            }))
+            .start()?;
+    }
     Ok(())
 }
 
 struct TimerCtx {
     apiv4: AfbApiV4,
 }
-// ping server every tic-ms to keep ocpp connection live
+// ping server every tic-ms to keep ocpp connection live (Warning: not supported by biapower backend)
 AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
 fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), AfbError> {
     AfbSubCall::call_sync(
@@ -76,20 +93,13 @@ fn meter_values_response(_api: &AfbApi, args: &AfbData) -> Result<(), AfbError> 
     Ok(())
 }
 
-struct EngyEvtCtx {
-    mgr: &'static ManagerHandle,
-}
-// report value meter to ocpp backend
 // ref: https://www.ampcontrol.io/ocpp-guide/how-to-send-ocpp-meter-values-with-metervalues-req
-AfbEventRegister!(EngyEvtCtrl, engy_event_cb, EngyEvtCtx);
-fn engy_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut EngyEvtCtx) -> Result<(), AfbError> {
-    let tid = ctx.mgr.get_tid()?;
+fn engy_event_action(state: &EnergyState, mgr: &'static ManagerHandle ) -> Result<v106::MeterValuesRequest , AfbError> {
+
+    let tid = mgr.get_tid()?;
     if tid == 0 {
         return afb_error!("ocpp-energy-state", "not active transaction running");
     }
-
-    let state = args.get::<&EnergyState>(0)?;
-    afb_log_msg!(Debug, evt, "energy:{:?}", state.clone());
 
     let tension_value = v106::SampledValue {
         value: (state.tension / 100).to_string(),
@@ -132,13 +142,28 @@ fn engy_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut EngyEvtCtx) -> Res
     };
 
     let query = v106::MeterValuesRequest {
-        connector_id: ctx.mgr.get_cid(),
+        connector_id: mgr.get_cid(),
         transaction_id: Some(tid),
         meter_value: vec![v106::MeterValue {
             timestamp: get_utc(),
             sampled_value: vec![tension_value, power_value, current_value, session_value],
         }],
     };
+
+
+    Ok(query)
+}
+
+struct EngyEvtCtx {
+    mgr: &'static ManagerHandle,
+}
+// report value meter to ocpp backend
+AfbEventRegister!(EngyEvtCtrl, engy_event_cb, EngyEvtCtx);
+fn engy_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut EngyEvtCtx) -> Result<(), AfbError> {
+
+    let state = args.get::<&EnergyState>(0)?;
+    afb_log_msg!(Debug, evt, "energy:{:?}", state.clone());
+    let query= engy_event_action(state, ctx.mgr) ?;
 
     AfbSubCall::call_async(
         evt.get_apiv4(),
@@ -147,7 +172,31 @@ fn engy_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut EngyEvtCtx) -> Res
         v106::MeterValues::Request(query),
         Box::new(MeterValuesRsp {}),
     )?;
+    Ok(())
+}
 
+struct EngyMockRqtCtx {
+    mgr: &'static ManagerHandle,
+}
+// this verb is only for testing purpose real measure should be send from engy event
+AfbVerbRegister!(EngyMockRqt, engy_state_request, EngyMockRqtCtx);
+fn engy_state_request(
+    rqt: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut EngyMockRqtCtx,
+) -> Result<(), AfbError> {
+    let state = args.get::<&EnergyState>(0)?;
+
+    afb_log_msg!(Debug, rqt, "EngyStateVerb request");
+    let query= engy_event_action( state, ctx.mgr) ?;
+
+    AfbSubCall::call_sync(
+        rqt.get_api().get_apiv4(),
+        "OCPP-C",
+        "MeterValues",
+        v106::MeterValues::Request(query),
+    )?;
+    rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
 
@@ -161,22 +210,25 @@ fn heartbeat_response(
     ctx: &mut HeartbeatRspCtx,
 ) -> Result<(), AfbError> {
     let data = args.get::<&v106::Heartbeat>(0)?;
-    match data {
+    let response = match data {
         v106::Heartbeat::Response(response) => response,
         _ => return afb_error!("ocpp-heartbeat-response", "invalid response type"),
     };
 
-    afb_log_msg!(Debug, rqt, "Heartbeat request nonce:{}", ctx.nonce);
+    afb_log_msg!(
+        Debug,
+        rqt,
+        "Heartbeat request nonce:{} time={}",
+        ctx.nonce,
+        response.current_time
+    );
     rqt.reply(ctx.nonce, 0);
     Ok(())
 }
 
 // Authentication check id_tag on backend
 AfbVerbRegister!(HeartbeatRqt, heartbeat_request);
-fn heartbeat_request(
-    rqt: &AfbRequest,
-    args: &AfbData,
-) -> Result<(), AfbError> {
+fn heartbeat_request(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     let nonce = args.get::<u32>(0)?;
     afb_log_msg!(Debug, rqt, "Heartbeat request nonce:{}", nonce);
 
@@ -209,6 +261,7 @@ fn authorize_response(
 
     match response.id_tag_info.status {
         v106::AuthorizationStatus::Accepted => {
+            afb_log_msg!(Debug, rqt, "ocpp-authorize-done");
             ctx.mgr.authorized(true)?;
         }
         _ => {
@@ -252,6 +305,7 @@ fn authorize_request(
 struct TransacStartRspCtx {
     mgr: &'static ManagerHandle,
 }
+// reference: https://www.ampcontrol.io/ocpp-guide/how-to-start-an-ocpp-charging-session-with-starttransaction
 AfbVerbRegister!(TransacStartRsp, transac_start_rsp, TransacStartRspCtx);
 fn transac_start_rsp(
     rqt: &AfbRequest,
@@ -261,7 +315,7 @@ fn transac_start_rsp(
     let data = args.get::<&v106::StartTransaction>(0)?;
     let response = match data {
         v106::StartTransaction::Response(response) => response,
-        _ => return afb_error!("ocpp-transaction-start", "invalid response type"),
+        _ => return afb_error!("ocpp-transaction-start", "invalid response"),
     };
 
     let tid = match response.id_tag_info.status {
@@ -355,44 +409,41 @@ fn transaction_request(
     Ok(())
 }
 
-pub(crate) fn register_frontend(
-    rootapi: AfbApiV4,
-    api: &mut AfbApi,
-    config: &BindingConfig,
-) -> Result<(), AfbError> {
-    AfbTimer::new("tic-timer")
-        .set_period(config.tic)
-        .set_decount(0)
-        .set_callback(Box::new(TimerCtx { apiv4: rootapi }))
-        .start()?;
-
+pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
     let engy_handler = AfbEvtHandler::new("energy-evt")
         .set_pattern(to_static_str(format!("{}/*", config.engy_api)))
         .set_callback(Box::new(EngyEvtCtx { mgr: config.mgr }))
         .finalize()?;
 
     let heartbeat_verb = AfbVerb::new("heartbeat")
-        .set_callback(Box::new(HeartbeatRqt{}))
+        .set_callback(Box::new(HeartbeatRqt {}))
         .set_info("Request tagid authorization from backend")
         .finalize()?;
 
     let authorize_verb = AfbVerb::new("authorize")
         .set_callback(Box::new(AuthorizeRqtCtx { mgr: config.mgr }))
         .set_info("Request tagid authorization from backend")
-        .set_sample("tux-evse-1")?
-        .set_sample("tux-evse-2")?
+        .set_sample("'tux-evse-1'")?
+        .set_sample("'tux-evse-2'")?
         .set_usage("idTag")
         .finalize()?;
 
     let transaction_verb = AfbVerb::new("transaction")
         .set_callback(Box::new(TransacRqtCtx { mgr: config.mgr }))
         .set_info("send start/stop transaction to backend")
-        .set_usage("idTag")
+        .set_usage("'idTag'")
         .finalize()?;
+
+    let engy_state_verb = AfbVerb::new("engy-state")
+        .set_callback(Box::new(EngyMockRqtCtx { mgr: config.mgr }))
+        .set_info("testing vern to mock engy state event")
+        .finalize()?;
+
 
     // register veb within API
     api.add_verb(authorize_verb);
     api.add_verb(transaction_verb);
+    api.add_verb(engy_state_verb);
     api.add_verb(heartbeat_verb);
     api.add_evt_handler(engy_handler);
 

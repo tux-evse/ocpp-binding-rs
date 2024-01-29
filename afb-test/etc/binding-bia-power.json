@@ -6,15 +6,15 @@
     },
     "binding": [
         {
-            "uid": "ocpp-frontend-16",
+            "uid": "ocpp-frontend-106",
             "api": "ocpp-16",
             "station": "Tux-frontend-01",
             "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
             "info": "RUST OCPP-16 frontend client",
             "cid": 1, // biapower does not support connector-id==0
             "tic": 0, // bia power does not support cross request
-            "chmgr_api": "chmgr",
-            "engy_api": "engy",
+            "chmgr_api": "ocpp-test",
+            "engy_api": "ocpp-test",
         }
     ]
 }

@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Native",
+            "name": "Binding-16",
             "type": "lldb",
             "preLaunchTask": "test-native-build",
             "request": "launch",
@@ -17,8 +17,33 @@
                 "-vvv",
                 "--monitoring",
                 "--trap-faults=0",
-                "--tracereq=all",
+                "--config=afb-binding/etc/binder-ocpp.json",
                 "--config=afb-binding/etc/binding-bia-power.json",
+                "--traceevt=all",
+            ],
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "target stop-hook add -n _start -o continue",
+                "settings set target.disable-aslr false",
+            ]
+        },
+        {
+            "name": "Test-16",
+            "type": "lldb",
+            "preLaunchTask": "test-native-build",
+            "request": "launch",
+            "program": "afb-binder",
+            "env": {
+                "LD_LIBRARY_PATH": "/usr/local/lib64"
+            },
+            "args": [
+                "-vvv",
+                "--monitoring",
+                "--trap-faults=0",
+                "--traceapi=all",
+                "--config=afb-binding/etc/binder-ocpp.json",
+                "--config=afb-test/etc/binding-bia-power.json",
+                "--config=afb-test/etc/binding-test-ocpp-16.json",
             ],
             "cwd": "${workspaceFolder}",
             "initCommands": [

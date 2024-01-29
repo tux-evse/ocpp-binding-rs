@@ -2,9 +2,9 @@
 resolver = "2"
 
 members = [
+    "afb-types",
     "ocpp-lib",
     "afb-binding",
-    "afb-types",
     "afb-test",
 ]
 

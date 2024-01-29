@@ -1,0 +1,16 @@
+{
+    "name": "afb-ocpp-test",
+    "monitoring": true,
+    "binding": [
+        {
+            "uid": "ocpp-test",
+            "api": "ocpp-test",
+            "path": "${CARGO_TARGET_DIR}debug/examples/libocpp_test.so",
+            "info": "RUST OCPP-16 frontend client",
+            "target": "ocpp-16",
+            "autostart": true,
+            "autoexit": true,
+            "output": "tap"
+        }
+    ]
+}

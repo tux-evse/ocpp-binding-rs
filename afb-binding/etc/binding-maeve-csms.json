@@ -1,16 +1,5 @@
-{
-  "name": "afb-rust",
-  "no-ldpaths": true,
-  "port": 1234,
-  "alias": ["/devtools:/usr/share/afb-ui-devtools/binder"],
-  "monitoring": true,
 
-  "extension": [
-     {
-       "path": "/usr/local/redpesk/afb-ocpp/lib/libafb-ocpp-ext.so"
-     }
-   ],
-
+  "binding": [
   "@extconfig": {
      "OCPP": {
        "ocpp-client": "csms-host:9310/ws/Tux-Basic",
@@ -18,15 +7,15 @@
      }
    },
 
-  "binding": [
     {
-        "uid": "ocpp-frontend",
-        "api": "frontend",
-        "station": "Tux-EvSE",
+        "uid": "ocpp-20-frontend",
+        "api": "ocpp-20",
         "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
         "info": "RUST OCPP-16 frontend client",
+        "station": "Tux-EvSE",
         "chmgr_api": "chmgr",
         "engy_api": "engy",
+        "tic": 5000,
     }
   ]
 }

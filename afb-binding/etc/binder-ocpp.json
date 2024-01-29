@@ -1,0 +1,13 @@
+{
+  "name": "afb-ocpp",
+  "no-ldpaths": true,
+  "port": 1234,
+  "httpd": true,
+  "alias": ["/devtools:/usr/share/afb-ui-devtools/binder"],
+
+  "extension": [
+     {
+       "path": "/usr/local/redpesk/afb-ocpp/lib/libafb-ocpp-ext.so"
+     }
+   ],
+}
