@@ -82,6 +82,7 @@ pub type SampledValue= types::SampledValue;
 pub type MeterValue= types::MeterValue;
 pub type UnitOfMeasure= types::UnitOfMeasure;
 pub type Measurand= types::Measurand;
+pub type ChargingProfileStatus= types::ChargingProfileStatus;
 
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]
@@ -303,6 +304,7 @@ AfbDataConverter!(stop_transaction, StopTransaction);
 AfbDataConverter!(remote_reset, Reset);
 AfbDataConverter!(reserve_now, ReserveNow);
 AfbDataConverter!(meter_values, MeterValues);
+AfbDataConverter!(set_charging_profile, SetChargingProfile);
 
 pub fn register_datatype() -> Result<(),AfbError> {
     // Custom type should be registered at binding startup time
@@ -319,5 +321,6 @@ pub fn register_datatype() -> Result<(),AfbError> {
    remote_reset::register()?;
    reserve_now::register()?;
    meter_values::register()?;
+   set_charging_profile::register()?;
    Ok(())
 }

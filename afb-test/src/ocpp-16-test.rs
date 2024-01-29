@@ -33,6 +33,11 @@ impl AfbApiControls for TapUserData {
             .add_arg("tux-evse-001")?
             .finalize()?;
 
+        let heartbeat = AfbTapTest::new("heartbeat", self.target, "heartbeat")
+            .set_info("send heartbeat to backend")
+            .add_arg(123456789)? // provide a nonce
+            .finalize()?;
+
         // start transaction with tagid
         let start_transaction = AfbTapTest::new("transaction-start", self.target, "transaction")
             .set_info("send start transaction")
@@ -41,6 +46,7 @@ impl AfbApiControls for TapUserData {
 
         let send_measure = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
             .set_info("send mock measure to backend")
+            .set_delay(10000) // wait 10 s before pushing this test
             .add_arg(EnergyState {
                 subscription_max: 0,
                 imax: 0,
@@ -58,13 +64,10 @@ impl AfbApiControls for TapUserData {
         // stop transaction send consumes power
         let stop_transaction = AfbTapTest::new("transaction-stop", self.target, "transaction")
             .set_info("send stop transaction")
+            .set_delay(10000) // wait 10 s before pushing this test
             .add_arg(OcppTransaction::Stop(1234))?
             .finalize()?;
 
-        let heartbeat = AfbTapTest::new("heartbeat", self.target, "heartbeat")
-            .set_info("send heartbeat to backend")
-            .add_arg(123456789)? // provide a nonce
-            .finalize()?;
 
         AfbTapSuite::new(api, "Tap Demo Test")
             .set_info("OCPP frontend -> occp server test")
