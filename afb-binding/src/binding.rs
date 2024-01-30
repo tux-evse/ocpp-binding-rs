@@ -66,7 +66,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
 
     // create occp manager
     let evt = AfbEvent::new("msg");
-    let mgr = ManagerHandle::new(rootv4, cid, evt, chmgr_api);
+    let mgr = ManagerHandle::new(rootv4, cid, evt, engy_api, chmgr_api);
     let config = BindingConfig {
         station,
         chmgr_api,
@@ -76,7 +76,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     };
 
     // create backend API (OCPP upercase is impose by transport extension)
-    let backend = AfbApi::new("OCPP").set_info(info);
+    let backend = AfbApi::new("OCPP-REC").set_info(info);
     register_backend(backend, &config)?;
 
     // create an register frontend api and register init session callback

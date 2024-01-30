@@ -75,6 +75,7 @@ pub type ChargePointErrorCode= types::ChargePointErrorCode;
 pub type CancelReservationStatus= types::CancelReservationStatus;
 pub type AvailabilityType= types::AvailabilityType;
 pub type AvailabilityStatus= types::AvailabilityStatus;
+pub type ResetRequestStatus= types::ResetRequestStatus;
 pub type ResetResponseStatus= types::ResetResponseStatus;
 pub type ReservationStatus= types::ReservationStatus;
 pub type AuthorizationStatus= types::AuthorizationStatus;
@@ -83,6 +84,7 @@ pub type MeterValue= types::MeterValue;
 pub type UnitOfMeasure= types::UnitOfMeasure;
 pub type Measurand= types::Measurand;
 pub type ChargingProfileStatus= types::ChargingProfileStatus;
+pub type Reason= types::Reason;
 
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]

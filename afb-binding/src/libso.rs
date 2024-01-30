@@ -29,6 +29,6 @@ mod binding;
 
 pub(crate) mod prelude {
     pub(crate) use crate::backend::*;
-    pub(crate) use crate::frontend::*;
-    pub(crate) use crate::binding::*;
+    pub use crate::frontend::*;
+    pub use crate::binding::*;
 }

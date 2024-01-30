@@ -151,107 +151,71 @@ fn change_availability_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbErr
     Ok(())
 }
 
-AfbVerbRegister!(ResetVerb, reset_cb);
-fn reset_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+struct ResetVerbCtx {
+    mgr: &'static ManagerHandle,
+}
+AfbVerbRegister!(ResetVerb, reset_cb, ResetVerbCtx);
+fn reset_cb(rqt: &AfbRequest, args: &AfbData, ctx: &mut ResetVerb) -> Result<(), AfbError> {
     let data = args.get::<&v106::Reset>(0)?;
     match data {
-        v106::Reset::Request(value) => {
-            afb_log_msg!(Debug, rqt, "Backend reset {:?}", value);
-
-            // Fulup TBD Do something status= Accepted|Rejected|Scheduled
-            let response = v106::ResetResponse {
-                status: v106::ResetResponseStatus::Accepted,
+        v106::Reset::Request(reset) => {
+            afb_log_msg!(Debug, rqt, "Backend reset {:?}", reset);
+            let status = match reset.kind {
+                v106::ResetRequestStatus::Hard => {
+                    // should reboot hardware
+                    afb_log_msg!(Warning, rqt, "Hard reset (hardware reboot) ignored");
+                    v106::ResetResponseStatus::Rejected
+                }
+                v106::ResetRequestStatus::Soft => {
+                    ctx.mgr.reset()?;
+                    v106::ResetResponseStatus::Accepted
+                }
             };
+
+            let response = v106::ResetResponse { status };
             rqt.reply(v106::Reset::Response(response), 0);
         }
-        v106::Reset::Response(value) => {
-            afb_log_msg!(Warning, rqt, "Ignore reset data {:?}", value);
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported reset request");
             rqt.reply(AFB_NO_DATA, -1);
         }
     }
     Ok(())
 }
 
-// https://www.ampcontrol.io/ocpp-guide/how-to-use-smart-charging-with-ocpp
 // 6.43. SetChargingProfile.req
-// SetChargingProfile: {
-//     "connectorId": 1,
-//     "csChargingProfiles": {
-//         "chargingProfileId": 1,
-//         "transactionId": 21126266,
-//         "stackLevel": 99,
-//         "chargingProfilePurpose": "TxProfile",
-//         "chargingProfileKind": "Absolute",
-//         "chargingSchedule": {
-//             "duration": 3600,
-//             "startSchedule": "2024-01-29T18:29:41Z",
-//             "chargingRateUnit": "A",
-//             "chargingSchedulePeriod": [
-//                 {
-//                     "startPeriod": 0,
-//                     "limit": 3.1754264805429417,
-//                     "numberPhases": 3
-//                 }
-//             ]
-//         }
-//     }
-// }
+// https://www.ampcontrol.io/ocpp-guide/how-to-use-smart-charging-with-ocpp
 AfbVerbRegister!(SetChargingProfileVerb, set_charging_profile_cb);
 fn set_charging_profile_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
-    afb_log_msg! (Debug, rqt, "received  SetChargingProfile");
-    let data = args.get::<&v106::SetChargingProfile>(0)?;
-    // match data {
-    //     v106::SetChargingProfile::Request(value) => {
-    //         afb_log_msg!(Debug, rqt, "Backend cancel reservation{:?}", value);
-
-    //         let _id = value.connector_id;
-    //         let profile = value.cs_charging_profiles;
-
-    //         // check stack is lower ignore value
-    //         // profile.stack_level
-
-    //         match profile.charging_profile_purpose {
-    //             ChargingProfilePurposeType::ChargePointMaxProfile => {}
-    //             ChargingProfilePurposeType::TxDefaultProfile => {}
-    //             ChargingProfilePurposeType::TxProfile => {}
+    let _data = args.get::<&v106::SetChargingProfile>(0)?;
+    // SetChargingProfile: {
+    //     "connectorId": 1,
+    //     "csChargingProfiles": {
+    //         "chargingProfileId": 1,
+    //         "transactionId": 21126266,
+    //         "stackLevel": 99,
+    //         "chargingProfilePurpose": "TxProfile",
+    //         "chargingProfileKind": "Absolute",
+    //         "chargingSchedule": {
+    //             "duration": 3600,
+    //             "startSchedule": "2024-01-29T18:29:41Z",
+    //             "chargingRateUnit": "A",
+    //             "chargingSchedulePeriod": [
+    //                 {
+    //                     "startPeriod": 0,
+    //                     "limit": 3.1754264805429417,
+    //                     "numberPhases": 3
+    //                 }
+    //             ]
     //         }
-
-    //         match profile.chargingProfileKind {
-    //             ChargingProfileKindType::Absolute => {}
-    //             ChargingProfileKindType::Recurring => {}
-    //             ChargingProfileKindType::Recurring => {}
-    //         }
-
-    //         profile.chargingSchedule {
-    //             //          pub duration: Option<i32>,
-    //             // /// Optional. Starting point of an absolute schedule. If absent the schedule will be relative to start of charging.
-    //             // #[serde(skip_serializing_if = "Option::is_none")]
-    //             // pub start_schedule: Option<DateTime<Utc>>,
-    //             // /// Required. The unit of measure Limit is expressed in.
-    //             // pub charging_rate_unit: ChargingRateUnitType,
-    //             // /// Required. List of ChargingSchedulePeriod elements defining maximum power or current usage over time. The startSchedule of the first ChargingSchedulePeriod SHALL always be 0.
-    //             // pub charging_schedule_period: Vec<ChargingSchedulePeriod>,
-    //             // /// Optional. Minimum charging rate supported by the electric vehicle. The unit of measure is defined by the chargingRateUnit. This parameter is intended to be used by a local smart charging algorithm to optimize the power allocation for in the case a charging process is inefficient at lower charging rates. Accepts at most one digit fraction (e.g. 8.1)
-    //             // #[serde(skip_serializing_if = "Option::is_none")]
-    //             // pub min_charging_rate: Option<f32>,
-    //         }
-
-    //         // ignore recurrencyKind
-    //         // validTo
-
-    //         //ctx.mgr.set_cpid= profile.charging_profile_id;
-    //         if let Some(value) = profile.transaction_id {
-    //             // check transaction id on mgr
-    //         }
-
-            // Fulup TBD Do something status= Accepted|Rejected|Scheduled
-            let response = v106::SetChargingProfileResponse {
-                status: v106::ChargingProfileStatus::Accepted,
-            };
-            rqt.reply(v106::SetChargingProfile::Response(response), 0);
-            Ok(())
-        }
-
+    //     }
+    // }
+    let response = v106::SetChargingProfileResponse {
+        status: v106::ChargingProfileStatus::NotSupported,
+    };
+    rqt.reply(v106::SetChargingProfile::Response(response), 0);
+    Ok(())
+}
 
 // Fulup Verbs TDB
 // -----------------
@@ -285,7 +249,7 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
         .finalize()?;
 
     let reset = AfbVerb::new("Reset")
-        .set_callback(Box::new(ResetVerb {}))
+        .set_callback(Box::new(ResetVerbCtx { mgr: config.mgr }))
         .set_info("backend request frontend reset")
         .finalize()?;
 
@@ -293,7 +257,6 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
         .set_callback(Box::new(SetChargingProfileVerb {}))
         .set_info("backend request SetChargingProfile")
         .finalize()?;
-
 
     api.add_verb(cancel_resa);
     api.add_verb(reserve_now);

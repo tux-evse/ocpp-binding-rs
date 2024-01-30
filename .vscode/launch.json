@@ -37,10 +37,9 @@
                 "LD_LIBRARY_PATH": "/usr/local/lib64"
             },
             "args": [
-                "-vvv",
+                "-v",
                 "--monitoring",
                 "--trap-faults=0",
-                "--traceapi=all",
                 "--config=afb-binding/etc/binder-ocpp.json",
                 "--config=afb-test/etc/binding-bia-power.json",
                 "--config=afb-test/etc/binding-test-ocpp-16.json",

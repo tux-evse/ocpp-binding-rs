@@ -20,6 +20,7 @@ pub struct ManagerHandle {
     _event: &'static AfbEvent,
     data_set: RefCell<OcppState>,
     engy_api: &'static str,
+    chmgr_api: &'static str,
     cid: u32,
 }
 
@@ -29,10 +30,12 @@ impl ManagerHandle {
         cid: u32,
         event: &'static AfbEvent,
         engy_api: &'static str,
+        chmgr_api: &'static str,
     ) -> &'static mut Self {
         let handle = ManagerHandle {
             data_set: RefCell::new(OcppState::default()),
             engy_api,
+            chmgr_api,
             apiv4,
             _event: event,
             cid,
@@ -98,4 +101,11 @@ impl ManagerHandle {
         )?;
         Ok(())
     }
+
+    pub fn reset(&self) -> Result<(), AfbError> {
+        AfbSubCall::call_sync(self.apiv4, self.chmgr_api, "reset", AFB_NO_DATA)?;
+        self.logout()?;
+        Ok(())
+    }
+
 }

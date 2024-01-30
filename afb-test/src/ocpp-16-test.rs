@@ -33,7 +33,7 @@ impl AfbApiControls for TapUserData {
             .add_arg("tux-evse-001")?
             .finalize()?;
 
-        let heartbeat = AfbTapTest::new("heartbeat", self.target, "heartbeat")
+        let heartbeat_start = AfbTapTest::new("heartbeat-start", self.target, "heartbeat")
             .set_info("send heartbeat to backend")
             .add_arg(123456789)? // provide a nonce
             .finalize()?;
@@ -44,9 +44,15 @@ impl AfbApiControls for TapUserData {
             .add_arg(OcppTransaction::Start("tux-evse-001".to_string()))?
             .finalize()?;
 
+        let start_charge =
+            AfbTapTest::new("notify-charge-start", self.target, "status-notification")
+                .set_info("send charging notification")
+                .add_arg(OcppStatus::Charging)?
+                .finalize()?;
+
         let send_measure = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
             .set_info("send mock measure to backend")
-            .set_delay(10000) // wait 10 s before pushing this test
+            .set_delay(5000) // wait 5s before pushing this test
             .add_arg(EnergyState {
                 subscription_max: 0,
                 imax: 0,
@@ -61,22 +67,47 @@ impl AfbApiControls for TapUserData {
             })? // provide a nonce
             .finalize()?;
 
+        let finishing_charge = AfbTapTest::new(
+            "notify-charge-finishing",
+            self.target,
+            "status-notification",
+        )
+        .set_info("send available notification")
+        .set_delay(10000) // wait 30s before pushing this test
+        .add_arg(OcppStatus::Finishing)?
+        .finalize()?;
+
         // stop transaction send consumes power
         let stop_transaction = AfbTapTest::new("transaction-stop", self.target, "transaction")
             .set_info("send stop transaction")
-            .set_delay(10000) // wait 10 s before pushing this test
+            .set_delay(10000) // wait 10s before pushing this test
             .add_arg(OcppTransaction::Stop(1234))?
             .finalize()?;
 
+        let stop_charge = AfbTapTest::new("notify-charge-end", self.target, "status-notification")
+            .set_info("send available notification")
+            .add_arg(OcppStatus::Available)?
+            .finalize()?;
+
+        // wait before closing the connection (time to check backend->charger request)
+        let heartbeat_stop = AfbTapTest::new("heartbeat-stop", self.target, "heartbeat")
+            .set_info("send heartbeat to backend")
+            .add_arg(987654321)? // provide a nonce
+            .set_delay(30000) // wait 30s before pushing this test
+            .finalize()?;
 
         AfbTapSuite::new(api, "Tap Demo Test")
             .set_info("OCPP frontend -> occp server test")
             .set_timeout(0)
-            .add_test(heartbeat)
+            .add_test(heartbeat_start)
             .add_test(tagid_check)
             .add_test(start_transaction)
+            .add_test(start_charge)
             .add_test(send_measure)
+            .add_test(finishing_charge)
             .add_test(stop_transaction)
+            .add_test(stop_charge)
+            .add_test(heartbeat_stop)
             .set_autorun(self.autostart)
             .set_autoexit(self.autoexit)
             .set_output(self.output)
@@ -121,27 +152,15 @@ impl AfbApiControls for TapUserData {
     }
 }
 
-// lock engy+chmgr APIs
-struct StateRequestCtx {
-    evt: &'static AfbEvent,
-}
-AfbVerbRegister!(StateRequestVerb, state_request_cb, StateRequestCtx);
-fn state_request_cb(
-    rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut StateRequestCtx,
-) -> Result<(), AfbError> {
+AfbVerbRegister!(StateRequestVerb, state_request_cb);
+fn state_request_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     match args.get::<&EnergyAction>(0)? {
         EnergyAction::SUBSCRIBE => {
-            afb_log_msg!(Notice, rqt, "Subscribe {}", ctx.evt.get_uid());
-            ctx.evt.subscribe(rqt)?;
-            rqt.reply(AFB_NO_DATA, 0);
+            afb_log_msg!(Notice, rqt, "Subscribe");
         }
 
         EnergyAction::UNSUBSCRIBE => {
-            afb_log_msg!(Notice, rqt, "Unsubscribe {}", ctx.evt.get_uid());
-            ctx.evt.unsubscribe(rqt)?;
-            rqt.reply(AFB_NO_DATA, 0);
+            afb_log_msg!(Notice, rqt, "Unsubscribe");
         }
 
         _ => {
@@ -151,13 +170,22 @@ fn state_request_cb(
             )
         }
     }
+    rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
 
-AfbVerbRegister!(ReservechargerVerb, reserve_charger_cb);
+AfbVerbRegister!(ReserveChargerVerb, reserve_charger_cb);
 fn reserve_charger_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     let _reservation = args.get::<&ReservationSession>(0)?;
+    afb_log_msg!(Notice, rqt, "Testing Mock reservation verb");
     rqt.reply(ReservationStatus::Accepted, 0);
+    Ok(())
+}
+
+AfbVerbRegister!(ResetChargerVerb, reset_charger_cb);
+fn reset_charger_cb(rqt: &AfbRequest, _args: &AfbData) -> Result<(), AfbError> {
+    afb_log_msg!(Notice, rqt, "Testing Mock reset verb");
+    rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
 
@@ -179,19 +207,22 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
     ocpp_registers()?;
     engy_registers()?;
 
-    let state_event = AfbEvent::new("engy-state");
     let state_verb = AfbVerb::new("charging-state")
         .set_name("state")
-        .set_info("current charging state")
-        .set_action("['read','subscribe','unsubscribe']")?
-        .set_callback(Box::new(StateRequestCtx { evt: state_event }))
+        .set_info("Mock current energy state api")
+        .set_callback(Box::new(StateRequestVerb {}))
         .finalize()?;
 
     let reserve_verb = AfbVerb::new("reserve-charger")
         .set_name("reserve")
-        .set_info("reserve charging station start/stop data")
-        .set_action("['now','delay','cancel']")?
-        .set_callback(Box::new(ReservechargerVerb {}))
+        .set_info("Mock reserve charging manager api")
+        .set_callback(Box::new(ReserveChargerVerb {}))
+        .finalize()?;
+
+    let reset_verb = AfbVerb::new("reset-charger")
+        .set_name("reset")
+        .set_info("Mock reset charging manager api")
+        .set_callback(Box::new(ResetChargerVerb {}))
         .finalize()?;
 
     afb_log_msg!(Notice, rootv4, "ocpp test uid:{} target:{}", uid, target);
@@ -199,9 +230,9 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
         .set_info("Testing OCPP tap reporting")
         .require_api(target)
         .set_callback(Box::new(tap_config))
-        .add_event(state_event)
         .add_verb(state_verb)
         .add_verb(reserve_verb)
+        .add_verb(reset_verb)
         .seal(false)
         .finalize()?;
     Ok(api)

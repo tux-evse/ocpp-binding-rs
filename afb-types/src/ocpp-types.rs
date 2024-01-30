@@ -29,6 +29,36 @@ pub enum OcppTransaction {
     Stop(i32),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum OcppErrorCode {
+    ConnectorLockFailure,
+    GroundFailure,
+    HighTemperature,
+    InternalError,
+    NoError,
+    OtherError,
+    OverCurrentFailure,
+    OverVoltage,
+    PowerMeterFailure,
+    PowerSwitchFailure,
+    ReaderFailure,
+    UnderVoltage,
+    WeakSignal,
+}
+
+AfbDataConverter!(ocpp_status, OcppStatus);
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum OcppStatus {
+    Charging,
+    Reserved,
+    Unavailable,
+    Available,
+    Finishing,
+    Error(OcppErrorCode),
+}
+
 AfbDataConverter!(ocpp_state, OcppState);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
@@ -41,16 +71,17 @@ pub struct OcppState {
 impl OcppState {
     pub fn default() -> Self {
         OcppState {
-            connector_id:0,
+            connector_id: 0,
             tid: 0,
             authorized: false,
         }
     }
 }
 
-pub fn ocpp_registers() -> Result<(),AfbError> {
+pub fn ocpp_registers() -> Result<(), AfbError> {
     ocpp_msg::register()?;
     ocpp_state::register()?;
     ocpp_transaction::register()?;
+    ocpp_status::register()?;
     Ok(())
 }
