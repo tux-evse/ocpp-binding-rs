@@ -9,7 +9,7 @@
             "uid": "ocpp-frontend-106",
             "api": "ocpp-16",
             "station": "Tux-frontend-01",
-            "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
+            "path": "private:${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
             "info": "RUST OCPP-16 frontend client",
             "cid": 1,
             "tic": 0,

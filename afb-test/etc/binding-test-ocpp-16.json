@@ -8,8 +8,8 @@
             "path": "${CARGO_TARGET_DIR}debug/examples/libocpp_test.so",
             "info": "RUST OCPP-16 frontend client",
             "target": "ocpp-16",
-            "autostart": true,
-            "autoexit": true,
+            "autostart": false,
+            "autoexit": false,
             "output": "tap"
         }
     ]
