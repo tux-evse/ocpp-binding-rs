@@ -94,6 +94,17 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         frontend.set_permission(AfbPermission::new(perm));
     };
 
+    if chmgr_api == "" {
+        afb_log_msg! (Warning, rootv4, "Charging manager 'chgrp_api' not defined local test only");
+    }
+
+    if engy_api == "" {
+        afb_log_msg! (Warning, rootv4, "Energy manager 'engy_api' not defined local test only");
+    } else {
+        frontend.require_api(engy_api);
+        backend.require_api(engy_api);
+    }
+
     if let Ok(value) = jconf.get::<i32>("verbosity") {
         backend.set_verbosity(value);
         frontend.set_verbosity(value);
