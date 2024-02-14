@@ -36,16 +36,16 @@ fn heartbeat_cb(
             });
             rqt.reply(data, 0);
         }
-        v106::Heartbeat::Response(data) => {
-            afb_log_msg!(Warning, rqt, "Ignore heartbeat data {:?}", data);
-            rqt.reply(AFB_NO_DATA, 0);
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported reset request");
+            rqt.reply(AFB_NO_DATA, -1);
         }
     }
     Ok(())
 }
 
 struct CancelReservationCtx {
-    chmgr_api: &'static str,
+    mgr: &'static ManagerHandle,
 }
 AfbVerbRegister!(
     CancelReservationVerb,
@@ -61,25 +61,12 @@ fn cancel_notification_cb(
     match data {
         v106::CancelReservation::Request(value) => {
             afb_log_msg!(Debug, rqt, "Backend cancel reservation{:?}", value);
-
-            let reservation = ReservationSession {
-                id: value.reservation_id,
-                tagid: String::new(),
-                start: Duration::new(0, 0),
-                stop: Duration::new(0, 0),
-                status: ReservationStatus::Cancel,
-            };
-
-            let status = match AfbSubCall::call_sync(rqt, ctx.chmgr_api, "reserve", reservation) {
-                Ok(_value) => v106::CancelReservationStatus::Accepted,
-                Err(_error) => v106::CancelReservationStatus::Rejected,
-            };
-
+            let status = ctx.mgr.reserv_cancel(value.reservation_id)?;
             let response = v106::CancelReservationResponse { status };
             rqt.reply(v106::CancelReservation::Response(response), 0);
         }
-        v106::CancelReservation::Response(value) => {
-            afb_log_msg!(Warning, rqt, "Ignore status_notification data {:?}", value);
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported reset request");
             rqt.reply(AFB_NO_DATA, -1);
         }
     }
@@ -88,7 +75,7 @@ fn cancel_notification_cb(
 
 // 6.37. ReserveNow.req
 struct ReserveNowCtx {
-    chmgr_api: &'static str,
+    mgr: &'static ManagerHandle,
 }
 AfbVerbRegister!(ReserveNowVerb, reverve_now_cb, ReserveNowCtx);
 fn reverve_now_cb(
@@ -109,16 +96,12 @@ fn reverve_now_cb(
                 status: ReservationStatus::Pending,
             };
 
-            let status = match AfbSubCall::call_sync(rqt, ctx.chmgr_api, "reserve", reservation) {
-                Ok(_value) => v106::ReservationStatus::Accepted,
-                Err(_error) => v106::ReservationStatus::Rejected,
-            };
-
+            let status = ctx.mgr.reserv_now(reservation)?;
             let response = v106::ReserveNowResponse { status };
             rqt.reply(v106::ReserveNow::Response(response), 0);
         }
-        v106::ReserveNow::Response(value) => {
-            afb_log_msg!(Warning, rqt, "Ignore status_notification data {:?}", value);
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported reset request");
             rqt.reply(AFB_NO_DATA, -1);
         }
     }
@@ -143,8 +126,8 @@ fn change_availability_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbErr
             };
             rqt.reply(v106::ChangeAvailability::Response(response), 0);
         }
-        v106::ChangeAvailability::Response(value) => {
-            afb_log_msg!(Warning, rqt, "Ignore status_notification data {:?}", value);
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported reset request");
             rqt.reply(AFB_NO_DATA, -1);
         }
     }
@@ -183,11 +166,22 @@ fn reset_cb(rqt: &AfbRequest, args: &AfbData, ctx: &mut ResetVerb) -> Result<(),
     Ok(())
 }
 
+struct SetChargingProfileCtx {
+    mgr: &'static ManagerHandle,
+}
 // 6.43. SetChargingProfile.req
 // https://www.ampcontrol.io/ocpp-guide/how-to-use-smart-charging-with-ocpp
-AfbVerbRegister!(SetChargingProfileVerb, set_charging_profile_cb);
-fn set_charging_profile_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
-    let _data = args.get::<&v106::SetChargingProfile>(0)?;
+AfbVerbRegister!(
+    SetChargingProfileVerb,
+    set_charging_profile_cb,
+    SetChargingProfileCtx
+);
+fn set_charging_profile_cb(
+    rqt: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut SetChargingProfileCtx,
+) -> Result<(), AfbError> {
+    let data = args.get::<&v106::SetChargingProfile>(0)?;
     // SetChargingProfile: {
     //     "connectorId": 1,
     //     "csChargingProfiles": {
@@ -210,10 +204,39 @@ fn set_charging_profile_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbEr
     //         }
     //     }
     // }
-    let response = v106::SetChargingProfileResponse {
-        status: v106::ChargingProfileStatus::NotSupported,
-    };
-    rqt.reply(v106::SetChargingProfile::Response(response), 0);
+
+    match data {
+        v106::SetChargingProfile::Request(value) => {
+            afb_log_msg!(Debug, rqt, "Backend set charging profile {:?}", value);
+
+            let tid = value.cs_charging_profiles.transaction_id.unwrap();
+            let duration = value
+                .cs_charging_profiles
+                .charging_schedule
+                .duration
+                .unwrap();
+            let limit = value
+                .cs_charging_profiles
+                .charging_schedule
+                .charging_schedule_period[0]
+                .limit;
+
+            let limit = PowerLimit {
+                tid,
+                imax: (limit * 100.0).round() as i32,
+                duration: duration as u32,
+            };
+
+            let status = ctx.mgr.set_limit(limit)?;
+            let response = v106::SetChargingProfileResponse { status };
+            rqt.reply(v106::SetChargingProfile::Response(response), 0);
+        }
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported reset request");
+            rqt.reply(AFB_NO_DATA, -1);
+        }
+    }
+
     Ok(())
 }
 
@@ -235,16 +258,12 @@ fn set_charging_profile_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbEr
 
 pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
     let cancel_resa = AfbVerb::new("CancelReservation")
-        .set_callback(Box::new(CancelReservationVerb {
-            chmgr_api: config.chmgr_api,
-        }))
+        .set_callback(Box::new(CancelReservationVerb { mgr: config.mgr }))
         .set_info("backend cancel reservation")
         .finalize()?;
 
     let reserve_now = AfbVerb::new("ReserveNow")
-        .set_callback(Box::new(ReserveNowCtx {
-            chmgr_api: config.chmgr_api,
-        }))
+        .set_callback(Box::new(ReserveNowCtx { mgr: config.mgr }))
         .set_info("backend frontend reservation")
         .finalize()?;
 
@@ -254,7 +273,7 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
         .finalize()?;
 
     let setprofile = AfbVerb::new("SetChargingProfile")
-        .set_callback(Box::new(SetChargingProfileVerb {}))
+        .set_callback(Box::new(SetChargingProfileCtx { mgr: config.mgr }))
         .set_info("backend request SetChargingProfile")
         .finalize()?;
 

@@ -11,6 +11,7 @@
  */
 
 use afbv4::prelude::*;
+use crate::prelude::*;
 use serde::{Deserialize, Serialize};
 
 AfbDataConverter!(ocpp_msg, OcppMsg);
@@ -18,6 +19,11 @@ AfbDataConverter!(ocpp_msg, OcppMsg);
 #[serde(rename_all = "lowercase")]
 pub enum OcppMsg {
     Initialized,
+    Reset,
+    Authorized(bool),
+    Transaction(bool,u32),
+    Reservation(ReservationSession),
+    PowerLimit(PowerLimit),
     Unknown,
 }
 
@@ -59,12 +65,14 @@ pub enum OcppStatus {
     Error(OcppErrorCode),
 }
 
+
 AfbDataConverter!(ocpp_state, OcppState);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
 pub struct OcppState {
     pub connector_id: u32,
     pub tid: i32,
+    pub reservation: Option<ReservationSession>,
     pub authorized: bool,
 }
 
@@ -73,6 +81,7 @@ impl OcppState {
         OcppState {
             connector_id: 0,
             tid: 0,
+            reservation: None,
             authorized: false,
         }
     }
@@ -83,5 +92,6 @@ pub fn ocpp_registers() -> Result<(), AfbError> {
     ocpp_state::register()?;
     ocpp_transaction::register()?;
     ocpp_status::register()?;
+
     Ok(())
 }

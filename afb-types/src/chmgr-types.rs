@@ -38,6 +38,16 @@ pub enum PowerRequest {
     Idle,
 }
 
+
+AfbDataConverter!(power_limit, PowerLimit);
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub struct PowerLimit {
+    pub tid: i32,
+    pub imax: i32,
+    pub duration: u32,
+}
+
 AfbDataConverter!(plug_state, PlugState);
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
@@ -54,6 +64,7 @@ pub enum PlugState {
 pub enum IsoState {
     Iso20,
     Iso2,
+    Iso3,
     Iec,
     Unset,
 }
@@ -74,7 +85,7 @@ AfbDataConverter!(reservation_state, ReservationState);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
 pub struct ReservationState {
-    pub id: i64,
+    pub id: i32,
     pub start: Duration,
     pub stop: Duration,
 }
@@ -157,6 +168,7 @@ pub fn chmgr_registers() -> Result<(), AfbError> {
     charging_event::register()?;
     reservation_session::register()?;
     reservation_state::register()?;
+    power_limit::register()?;
 
     Ok(())
 }

@@ -12,7 +12,7 @@
 
 use crate::prelude::*;
 use afbv4::prelude::*;
-use ocpp::{prelude::*};
+use ocpp::prelude::*;
 use typesv4::prelude::*;
 
 // init ocpp backend at API initialization time
@@ -411,14 +411,8 @@ fn transaction_request(
 
 // StatusNotification async start response callback
 
-AfbVerbRegister!(
-    StatusNotificationRsp,
-    status_notification_rsp
-);
-fn status_notification_rsp(
-    rqt: &AfbRequest,
-    args: &AfbData,
-) -> Result<(), AfbError> {
+AfbVerbRegister!(StatusNotificationRsp, status_notification_rsp);
+fn status_notification_rsp(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     let data = args.get::<&v106::StatusNotification>(0)?;
     let _response = match data {
         v106::StatusNotification::Response(response) => response,
@@ -452,7 +446,9 @@ fn status_notification_rqt(
         OcppStatus::Finishing => v106::ChargePointStatus::Finishing,
         OcppStatus::Error(err_code) => {
             error_code = match err_code {
-                OcppErrorCode::ConnectorLockFailure => v106::ChargePointErrorCode::ConnectorLockFailure,
+                OcppErrorCode::ConnectorLockFailure => {
+                    v106::ChargePointErrorCode::ConnectorLockFailure
+                }
                 OcppErrorCode::GroundFailure => v106::ChargePointErrorCode::GroundFailure,
                 OcppErrorCode::HighTemperature => v106::ChargePointErrorCode::HighTemperature,
                 OcppErrorCode::InternalError => v106::ChargePointErrorCode::InternalError,
@@ -485,8 +481,26 @@ fn status_notification_rqt(
         "OCPP-SND",
         "StatusNotification",
         v106::StatusNotification::Request(query),
-        Box::new(StatusNotificationRsp{ }),
+        Box::new(StatusNotificationRsp {}),
     )?;
+    Ok(())
+}
+
+
+struct SubscribeData {
+    mgr: &'static ManagerHandle,
+
+}
+
+AfbVerbRegister!(SubscribeCtrl, subscribe_callback, SubscribeData);
+fn subscribe_callback(
+    request: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut SubscribeData,
+) -> Result<(), AfbError> {
+    let subcription = args.get::<bool>(0)?;
+    ctx.mgr.subscribe(request, subcription)?;
+    request.reply(AFB_NO_DATA, 0);
     Ok(())
 }
 
@@ -528,12 +542,19 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .set_info("testing vern to mock engy state event")
         .finalize()?;
 
+    let subscribe_verb = AfbVerb::new("subscribe")
+        .set_callback(Box::new(SubscribeCtrl { mgr: config.mgr  }))
+        .set_info("subscribe auth-msg event")
+        .set_usage("true|false")
+        .finalize()?;
+
     // register veb within API
     api.add_verb(authorize_verb);
     api.add_verb(transaction_verb);
     api.add_verb(status_notification_verb);
     api.add_verb(engy_state_verb);
     api.add_verb(heartbeat_verb);
+    api.add_verb(subscribe_verb);
     api.add_evt_handler(engy_handler);
 
     Ok(())

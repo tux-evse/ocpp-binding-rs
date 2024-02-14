@@ -11,16 +11,16 @@
  */
 
 //use crate::prelude::*;
+use crate::prelude::*;
 use afbv4::prelude::*;
 use std::cell::{RefCell, RefMut};
 use typesv4::prelude::*;
 
 pub struct ManagerHandle {
     apiv4: AfbApiV4,
-    _event: &'static AfbEvent,
+    event: &'static AfbEvent,
     data_set: RefCell<OcppState>,
     engy_api: &'static str,
-    chmgr_api: &'static str,
     cid: u32,
 }
 
@@ -30,14 +30,12 @@ impl ManagerHandle {
         cid: u32,
         event: &'static AfbEvent,
         engy_api: &'static str,
-        chmgr_api: &'static str,
     ) -> &'static mut Self {
         let handle = ManagerHandle {
             data_set: RefCell::new(OcppState::default()),
             engy_api,
-            chmgr_api,
             apiv4,
-            _event: event,
+            event,
             cid,
         };
 
@@ -48,9 +46,18 @@ impl ManagerHandle {
     #[track_caller]
     pub fn get_state(&self) -> Result<RefMut<'_, OcppState>, AfbError> {
         match self.data_set.try_borrow_mut() {
-            Err(_) => return afb_error!("charging-manager-update", "fail to access &mut data_set"),
+            Err(_) => return afb_error!("ocppmanager-update", "fail to access &mut data_set"),
             Ok(value) => Ok(value),
         }
+    }
+
+    pub fn subscribe(&self, request: &AfbRequest, subscription: bool) -> Result<(), AfbError> {
+        if subscription {
+            self.event.subscribe(request)?;
+        } else {
+            self.event.unsubscribe(request)?;
+        }
+        Ok(())
     }
 
     pub fn check_active_session(&self, status: bool) -> Result<(), AfbError> {
@@ -79,6 +86,7 @@ impl ManagerHandle {
 
     pub fn authorized(&self, authorized: bool) -> Result<(), AfbError> {
         let mut data_set = self.get_state()?;
+        self.event.push(OcppMsg::Authorized(authorized));
         data_set.authorized = authorized;
         Ok(())
     }
@@ -103,9 +111,57 @@ impl ManagerHandle {
     }
 
     pub fn reset(&self) -> Result<(), AfbError> {
-        AfbSubCall::call_sync(self.apiv4, self.chmgr_api, "reset", AFB_NO_DATA)?;
+        self.event.push(OcppMsg::Reset);
         self.logout()?;
         Ok(())
     }
 
+    pub fn reserv_now(
+        &self,
+        request: ReservationSession,
+    ) -> Result<v106::ReservationStatus, AfbError> {
+        let mut data_set = self.get_state()?;
+
+        let response = match &data_set.reservation {
+            Some(_value) => v106::ReservationStatus::Occupied,
+            None => {
+                self.event.push(OcppMsg::Reservation(request.clone()));
+                data_set.reservation = Some(request);
+                v106::ReservationStatus::Accepted
+            }
+        };
+        Ok(response)
+    }
+
+    pub fn reserv_cancel(&self, rid: i32) -> Result<v106::CancelReservationStatus, AfbError> {
+        let mut data_set = self.get_state()?;
+
+        let response = match &data_set.reservation {
+            None => v106::CancelReservationStatus::Rejected,
+            Some(resa) => {
+                if rid != resa.id {
+                    v106::CancelReservationStatus::Rejected
+                } else {
+                    let mut cancel = resa.clone();
+                    cancel.status = ReservationStatus::Cancel;
+                    self.event.push(OcppMsg::Reservation(cancel));
+                    data_set.reservation = None;
+                    v106::CancelReservationStatus::Accepted
+                }
+            }
+        };
+        Ok(response)
+    }
+
+    pub fn set_limit(&self, limit: PowerLimit) -> Result<v106::ChargingProfileStatus, AfbError> {
+        let data_set = self.get_state()?;
+
+        let response = if limit.tid != data_set.tid {
+            v106::ChargingProfileStatus::Rejected
+        } else {
+            self.event.push(OcppMsg::PowerLimit(limit));
+            v106::ChargingProfileStatus::Accepted
+        };
+        Ok(response)
+    }
 }
