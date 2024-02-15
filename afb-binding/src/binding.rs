@@ -16,6 +16,7 @@ use ocpp::prelude::*;
 use typesv4::prelude::*;
 
 pub struct BindingConfig {
+    pub chmgr_api: &'static str,
     pub engy_api: &'static str,
     pub station: &'static str,
     pub mgr: &'static ManagerHandle,
@@ -54,6 +55,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     let cid =  jconf.default::<u32>("cid",1)?;
     let tic = jconf.default::<u32>("tic",0)?;
     let station = jconf.default::<&'static str>("station","tux-evse")?;
+    let chmgr_api = jconf.default::<&'static str>("chmgr_api", "")?;
     let engy_api = jconf.default::<&'static str>("engy_api", "")?;
 
     // register data converter
@@ -64,9 +66,10 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
 
     // create occp manager
     let evt = AfbEvent::new("msg");
-    let mgr = ManagerHandle::new(rootv4, cid, evt, engy_api);
+    let mgr = ManagerHandle::new(rootv4, cid, evt, engy_api, chmgr_api);
     let config = BindingConfig {
         station,
+        chmgr_api,
         engy_api,
         mgr,
         cid,

@@ -1,7 +1,7 @@
 {
     "@extconfig": {
         "OCPP": {
-            "ocpp-client": "ocpp.biastaging.com:80/23WH0NJGH0"
+          //  "ocpp-client": "ocpp.biastaging.com:80/23WH0NJGH0" // borne 2: FD6NNB6KFS 
         }
     },
     "binding": [

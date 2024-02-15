@@ -21,6 +21,7 @@ pub struct ManagerHandle {
     event: &'static AfbEvent,
     data_set: RefCell<OcppState>,
     engy_api: &'static str,
+    chmgr_api: &'static str,
     cid: u32,
 }
 
@@ -30,10 +31,12 @@ impl ManagerHandle {
         cid: u32,
         event: &'static AfbEvent,
         engy_api: &'static str,
+        chmgr_api: &'static str,
     ) -> &'static mut Self {
         let handle = ManagerHandle {
             data_set: RefCell::new(OcppState::default()),
             engy_api,
+            chmgr_api,
             apiv4,
             event,
             cid,
@@ -164,4 +167,23 @@ impl ManagerHandle {
         };
         Ok(response)
     }
+    
+    
+    //Draft RMU: send remote stop request from OCPP to ChargingMgr
+    // ?? RemoteStopTransaction ou remoteStopTransaction
+    pub fn RemoteStopTransaction(&self, RemoteStopTransaction: bool) -> Result<(), AfbError> {
+        let mut data_set = self.get_state()?;
+	    self.event.push(OcppMsg::RemoteStopTransaction(RemoteStopTransaction));
+        data_set.RemoteStopTransaction = RemoteStopTransaction;
+        Ok(())
+    }
+    
+    //pub fn authorized(&self, authorized: bool) -> Result<(), AfbError> {
+    //    let mut data_set = self.get_state()?;
+    //    self.event.push(OcppMsg::Authorized(authorized));
+    //    data_set.authorized = authorized;
+    //    Ok(())
+    //}
+
+
 }

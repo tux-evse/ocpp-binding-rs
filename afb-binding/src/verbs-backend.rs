@@ -138,7 +138,13 @@ struct ResetVerbCtx {
     mgr: &'static ManagerHandle,
 }
 AfbVerbRegister!(ResetVerb, reset_cb, ResetVerbCtx);
-fn reset_cb(rqt: &AfbRequest, args: &AfbData, ctx: &mut ResetVerb) -> Result<(), AfbError> {
+
+
+fn reset_cb(
+        rqt: &AfbRequest, 
+        args: &AfbData, 
+        ctx: &mut ResetVerb
+) -> Result<(), AfbError> {
     let data = args.get::<&v106::Reset>(0)?;
     match data {
         v106::Reset::Request(reset) => {
@@ -256,6 +262,53 @@ fn set_charging_profile_cb(
 // 6.53. UnlockConnector.req
 // 6.55. UpdateFirmware.req
 
+
+
+
+// 6.33. RemoteStopTransaction.req   RMU
+struct RemoteStopTransactionCtx {
+    mgr: &'static ocpp::manager::ManagerHandle,
+}
+AfbVerbRegister!(RemoteStopTransaction, RemoteStopTransaction_cb, RemoteStopTransactionCtx);
+
+
+
+fn RemoteStopTransaction_cb(
+        rqt: &AfbRequest, 
+        args: &AfbData, 
+        ctx: &mut RemoteStopTransactionCtx
+) -> Result<(), AfbError> {
+    let data = args.get::<&v106::RemoteStopTransaction>(0)?;
+    match data {
+        v106::RemoteStopTransaction::Request(RemoteStopTransaction) => {
+            afb_log_msg!(Debug, rqt, "Backend Remote Stop Transaction req {:?}", RemoteStopTransaction);
+    //        let TransactionID = match reset.kind {
+    //            v106::ResetRequestStatus::Hard => {
+    //                // should reboot hardware
+    //                afb_log_msg!(Warning, rqt, "Hard reset (hardware reboot) ignored");
+    //                v106::RemoteStopTransactionResponseStatus::Rejected
+    //            }
+    //            v106::ResetRequestStatus::Soft => {
+    //                ctx.mgr.RemoteStopTransaction()?;
+    //                v106::RemoteStopTransactionResponseStatus::Accepted
+    //            }
+            
+        
+    //        let response = v106::RemoteStopTransactionResponse { status };
+    //        rqt.reply(v106::RemoteStopTransaction::Response(response), 0);
+        }
+        _ => {
+            afb_log_msg!(Warning, rqt, "Unsupported remote stop request request");
+            rqt.reply(AFB_NO_DATA, -1);
+        }
+    }
+    Ok(())
+}
+
+
+
+
+
 pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
     let cancel_resa = AfbVerb::new("CancelReservation")
         .set_callback(Box::new(CancelReservationVerb { mgr: config.mgr }))
@@ -272,6 +325,11 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
         .set_info("backend request frontend reset")
         .finalize()?;
 
+    let remoteStopTransaction = AfbVerb::new("RemoteStopTransaction")
+        .set_callback(Box::new(RemoteStopTransactionCtx { mgr: config.mgr }))
+	.set_info("backend request to stop transaction")
+        .finalize()?;
+
     let setprofile = AfbVerb::new("SetChargingProfile")
         .set_callback(Box::new(SetChargingProfileCtx { mgr: config.mgr }))
         .set_info("backend request SetChargingProfile")
@@ -281,6 +339,7 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
     api.add_verb(reserve_now);
     api.add_verb(setprofile);
     api.add_verb(reset);
+    api.add_verb(remoteStopTransaction);
 
     Ok(())
 }

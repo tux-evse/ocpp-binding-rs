@@ -50,22 +50,40 @@ impl AfbApiControls for TapUserData {
                 .add_arg(OcppStatus::Charging)?
                 .finalize()?;
 
-        let send_measure = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
+        let send_measure_1 = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
             .set_info("send mock measure to backend")
-            .set_delay(5000) // wait 5s before pushing this test
+            .set_delay(30000) // wait 5s before pushing this test
             .add_arg(EnergyState {
                 subscription_max: 0,
                 imax: 0,
                 pmax: 0,
                 tension_max: 0,
-                session: 102400,
-                total: 409600,
-                current: 1500,
+                session: 100,
+                total: 100,
+                current: 100,
                 tension: 24000,
-                power: 2200,
+                power: 100,
                 timestamp: Duration::new(0, 0),
             })? // provide a nonce
             .finalize()?;
+
+        let send_measure_2 = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
+            .set_info("send mock measure to backend")
+            .set_delay(30000) // wait 5s before pushing this test
+            .add_arg(EnergyState {
+                subscription_max: 0,
+                imax: 0,
+                pmax: 0,
+                tension_max: 0,
+                session: 2222,
+                total: 2222,
+                current: 2222,
+                tension: 24000,
+                power: 2222,
+                timestamp: Duration::new(0, 0),
+            })? // provide a nonce
+            .finalize()?;
+
 
         let finishing_charge = AfbTapTest::new(
             "notify-charge-finishing",
@@ -103,7 +121,8 @@ impl AfbApiControls for TapUserData {
             .add_test(tagid_check)
             .add_test(start_transaction)
             .add_test(start_charge)
-            .add_test(send_measure)
+            .add_test(send_measure_1)
+            .add_test(send_measure_2)
             .add_test(finishing_charge)
             .add_test(stop_transaction)
             .add_test(stop_charge)
