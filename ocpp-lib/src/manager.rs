@@ -68,7 +68,7 @@ impl ManagerHandle {
         if !status && data_set.tid != 0 {
             return afb_error!(
                 "ocpp-running-session",
-                "Already running session tid:{}",
+                "Running session tid:{} already running",
                 data_set.tid
             );
         }

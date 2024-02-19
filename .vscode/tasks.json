@@ -14,13 +14,25 @@
             "label": "test-native-build",
             "type": "cargo",
             "command": "build",
-            "args": ["--example", "ocpp_test"],
+            "args": [
+                "--example",
+                "ocpp_test"
+            ],
             "dependsOn": [
                 "binding-native-build"
             ],
             "problemMatcher": [
                 "$rustc"
-            ],
+            ]
         },
+        {
+            "type": "cargo",
+            "command": "check",
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build",
+            "label": "rust: cargo check"
+        }
     ]
 }

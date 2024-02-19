@@ -368,7 +368,7 @@ fn transaction_request(
     match data {
         OcppTransaction::Start(tag) => {
             afb_log_msg!(Debug, rqt, "Start Transaction request");
-            //ctx.mgr.check_active_session(false)?;
+            ctx.mgr.check_active_session(false)?;
             let query = v106::StartTransactionRequest {
                 connector_id: ctx.mgr.get_cid(),
                 id_tag: tag.clone(),
@@ -518,9 +518,13 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
     let authorize_verb = AfbVerb::new("authorize")
         .set_callback(Box::new(AuthorizeRqtCtx { mgr: config.mgr }))
         .set_info("Request tagid authorization from backend")
-        .set_sample("'tux-evse-1'")?
-        .set_sample("'tux-evse-2'")?
         .set_usage("idTag")
+        .finalize()?;
+
+    let transaction_verb = AfbVerb::new("transaction")
+        .set_callback(Box::new(TransacRqtCtx { mgr: config.mgr }))
+        .set_info("send start/stop transaction to backend")
+        .set_usage("'idTag'")
         .finalize()?;
 
     let status_notification_verb = AfbVerb::new("status-notification")
@@ -529,12 +533,6 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .set_sample("'Charging'")?
         .set_sample("'Available'")?
         .set_usage("ocpp-status")
-        .finalize()?;
-
-    let transaction_verb = AfbVerb::new("transaction")
-        .set_callback(Box::new(TransacRqtCtx { mgr: config.mgr }))
-        .set_info("send start/stop transaction to backend")
-        .set_usage("'idTag'")
         .finalize()?;
 
     let engy_state_verb = AfbVerb::new("engy-state")

@@ -209,7 +209,16 @@ fn set_charging_profile_cb(
         v106::SetChargingProfile::Request(value) => {
             afb_log_msg!(Debug, rqt, "Backend set charging profile {:?}", value);
 
-            let tid = value.cs_charging_profiles.transaction_id.unwrap();
+            let target_tid = match value.cs_charging_profiles.transaction_id {
+                Some(value) => value,
+                None => -1,
+            };
+            let current_tid= ctx.mgr.get_tid()?;
+
+            if target_tid !=current_tid {
+               return afb_error!("ocpp-set-profile", "fail tid:{} != current:{}", target_tid,current_tid);
+            }
+
             let duration = value
                 .cs_charging_profiles
                 .charging_schedule
@@ -222,7 +231,7 @@ fn set_charging_profile_cb(
                 .limit;
 
             let limit = PowerLimit {
-                tid,
+                tid: target_tid,
                 imax: (limit * 100.0).round() as i32,
                 duration: duration as u32,
             };
