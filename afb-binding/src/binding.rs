@@ -80,6 +80,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     let frontend = AfbApi::new(api)
         .set_info(info)
         .add_event(evt)
+        .require_api(engy_api)
         .set_callback(Box::new(ApiUserData { mgr, station, evt, tic }));
 
     register_frontend(frontend, &config)?;
