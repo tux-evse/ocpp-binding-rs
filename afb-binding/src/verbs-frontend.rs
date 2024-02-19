@@ -368,7 +368,7 @@ fn transaction_request(
     match data {
         OcppTransaction::Start(tag) => {
             afb_log_msg!(Debug, rqt, "Start Transaction request");
-            ctx.mgr.check_active_session(false)?;
+            //ctx.mgr.check_active_session(false)?;
             let query = v106::StartTransactionRequest {
                 connector_id: ctx.mgr.get_cid(),
                 id_tag: tag.clone(),
