@@ -16,6 +16,17 @@ use ocpp::prelude::*;
 use std::time::Duration;
 use typesv4::prelude::*;
 
+
+// Generic callback when ocpp response should be ignored
+AfbVerbRegister!(IgnoreOcppBackendRsp, ignore_backend_rsp);
+fn ignore_backend_rsp(
+    rqt: &AfbRequest,
+    _args: &AfbData,
+) -> Result<(), AfbError> {
+    rqt.reply(AFB_NO_DATA, 0);
+    Ok(())
+}
+
 struct HeartbeatCtxData {
     count: u32,
 }
@@ -182,29 +193,6 @@ fn set_charging_profile_cb(
     ctx: &mut SetChargingProfileCtx,
 ) -> Result<(), AfbError> {
     let data = args.get::<&v106::SetChargingProfile>(0)?;
-    // SetChargingProfile: {
-    //     "connectorId": 1,
-    //     "csChargingProfiles": {
-    //         "chargingProfileId": 1,
-    //         "transactionId": 21126266,
-    //         "stackLevel": 99,
-    //         "chargingProfilePurpose": "TxProfile",
-    //         "chargingProfileKind": "Absolute",
-    //         "chargingSchedule": {
-    //             "duration": 3600,
-    //             "startSchedule": "2024-01-29T18:29:41Z",
-    //             "chargingRateUnit": "A",
-    //             "chargingSchedulePeriod": [
-    //                 {
-    //                     "startPeriod": 0,
-    //                     "limit": 3.1754264805429417,
-    //                     "numberPhases": 3
-    //                 }
-    //             ]
-    //         }
-    //     }
-    // }
-
     match data {
         v106::SetChargingProfile::Request(value) => {
             afb_log_msg!(Debug, rqt, "Backend set charging profile {:?}", value);
@@ -213,10 +201,33 @@ fn set_charging_profile_cb(
                 Some(value) => value,
                 None => -1,
             };
-            let current_tid= ctx.mgr.get_tid()?;
+            let current_tid = ctx.mgr.get_tid()?;
 
-            if target_tid !=current_tid {
-               return afb_error!("ocpp-set-profile", "fail tid:{} != current:{}", target_tid,current_tid);
+                // to avoid log mess we try to kill any invalid transaction
+            if target_tid != current_tid {
+                let query = v106::StopTransactionRequest {
+                    id_tag: None,
+                    meter_stop: 0,
+                    timestamp: get_utc(),
+                    reason: None,
+                    transaction_data: None,
+                    transaction_id: current_tid,
+                };
+
+                AfbSubCall::call_async(
+                    rqt,
+                    "OCPP-SND",
+                    "StopTransaction",
+                    v106::StopTransaction::Request(query),
+                    Box::new(IgnoreOcppBackendRsp {}),
+                )?;
+
+                return afb_error!(
+                    "ocpp-set-profile",
+                    "fail tid:{} != current:{}",
+                    target_tid,
+                    current_tid
+                );
             }
 
             let duration = value
