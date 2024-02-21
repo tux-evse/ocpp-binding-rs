@@ -195,23 +195,23 @@ fn set_charging_profile_cb(
     let data = args.get::<&v106::SetChargingProfile>(0)?;
     match data {
         v106::SetChargingProfile::Request(value) => {
-            afb_log_msg!(Debug, rqt, "Backend set charging profile {:?}", value);
 
             let target_tid = match value.cs_charging_profiles.transaction_id {
                 Some(value) => value,
                 None => -1,
             };
-            let current_tid = ctx.mgr.get_tid()?;
 
-                // to avoid log mess we try to kill any invalid transaction
-            if target_tid != current_tid {
+            // to avoid log mess we try to kill any invalid transaction
+            let session_tid = ctx.mgr.get_tid()?;
+            if target_tid != session_tid {
+                afb_log_msg!(Notice, rqt, "Ignored set-charging-profile backend_tid:{} != session_tid:{}", target_tid, session_tid);
                 let query = v106::StopTransactionRequest {
                     id_tag: None,
                     meter_stop: 0,
                     timestamp: get_utc(),
                     reason: None,
                     transaction_data: None,
-                    transaction_id: current_tid,
+                    transaction_id: session_tid,
                 };
 
                 AfbSubCall::call_async(
@@ -226,10 +226,11 @@ fn set_charging_profile_cb(
                     "ocpp-set-profile",
                     "fail tid:{} != current:{}",
                     target_tid,
-                    current_tid
+                    session_tid
                 );
             }
 
+            afb_log_msg!(Debug, rqt, "Backend set-charging-profile {:?}", value);
             let duration = value
                 .cs_charging_profiles
                 .charging_schedule
