@@ -512,7 +512,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
 
     let heartbeat_verb = AfbVerb::new("heartbeat")
         .set_callback(Box::new(HeartbeatRqt {}))
-        .set_info("Request tagid authorization from backend")
+        .set_info("Request ping backend")
         .finalize()?;
 
     let authorize_verb = AfbVerb::new("authorize")
