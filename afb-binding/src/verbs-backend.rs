@@ -205,12 +205,13 @@ fn set_charging_profile_cb(
             let session_tid = ctx.mgr.get_tid()?;
             if target_tid != session_tid {
                 afb_log_msg!(Notice, rqt, "Ignored set-charging-profile backend_tid:{} != session_tid:{}", target_tid, session_tid);
-                return afb_error!(
-                    "ocpp-set-profile",
-                    "fail tid:{} != current:{}",
-                    target_tid,
-                    session_tid
-                );
+                rqt.reply(AFB_NO_DATA, 0);
+                // return afb_error!(
+                //     "ocpp-set-profile",
+                //     "fail tid:{} != current:{}",
+                //     target_tid,
+                //     session_tid
+                // );
             }
 
             afb_log_msg!(Debug, rqt, "Backend set-charging-profile accepted {:?}", value);
@@ -237,7 +238,7 @@ fn set_charging_profile_cb(
         }
         _ => {
             afb_log_msg!(Warning, rqt, "Unsupported reset request");
-            rqt.reply(AFB_NO_DATA, -1);
+            rqt.reply(AFB_NO_DATA, 0); // if returning error bia will cut connection
         }
     }
 
