@@ -206,12 +206,9 @@ fn set_charging_profile_cb(
             if target_tid != session_tid {
                 afb_log_msg!(Notice, rqt, "Ignored set-charging-profile backend_tid:{} != session_tid:{}", target_tid, session_tid);
                 rqt.reply(AFB_NO_DATA, 0);
-                // return afb_error!(
-                //     "ocpp-set-profile",
-                //     "fail tid:{} != current:{}",
-                //     target_tid,
-                //     session_tid
-                // );
+                let status= v106::ChargingProfileStatus::Rejected;
+                let response = v106::SetChargingProfileResponse { status };
+                rqt.reply(v106::SetChargingProfile::Response(response), 0);
                 return Ok(())
             }
 
