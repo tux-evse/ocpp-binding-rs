@@ -212,6 +212,7 @@ fn set_charging_profile_cb(
                 //     target_tid,
                 //     session_tid
                 // );
+                return Ok(())
             }
 
             afb_log_msg!(Debug, rqt, "Backend set-charging-profile accepted {:?}", value);
