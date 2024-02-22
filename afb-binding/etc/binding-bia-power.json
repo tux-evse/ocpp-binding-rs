@@ -13,7 +13,6 @@
             "info": "RUST OCPP-16 frontend client",
             "cid": 1, // biapower does not support connector-id==0
             "tic": 0, // bia power does not support cross request
-            "chmgr_api": "chmgr",
             "engy_api": "engy",
         }
     ]
