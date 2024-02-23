@@ -205,7 +205,6 @@ fn set_charging_profile_cb(
             let session_tid = ctx.mgr.get_tid()?;
             if target_tid != session_tid {
                 afb_log_msg!(Notice, rqt, "Ignored set-charging-profile backend_tid:{} != session_tid:{}", target_tid, session_tid);
-                rqt.reply(AFB_NO_DATA, 0);
                 let status= v106::ChargingProfileStatus::Accepted;
                 let response = v106::SetChargingProfileResponse { status };
                 rqt.reply(v106::SetChargingProfile::Response(response), 0);
