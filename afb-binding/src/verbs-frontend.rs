@@ -161,6 +161,7 @@ struct EngyEvtCtx {
 // report value meter to ocpp backend
 AfbEventRegister!(EngyEvtCtrl, engy_event_cb, EngyEvtCtx);
 fn engy_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut EngyEvtCtx) -> Result<(), AfbError> {
+    println! ("**** got engy event");
     let state = args.get::<&EnergyState>(0)?;
     afb_log_msg!(Debug, evt, "energy:{:?}", state.clone());
     let query = engy_event_action(state, ctx.mgr)?;

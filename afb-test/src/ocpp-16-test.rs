@@ -51,10 +51,13 @@ impl AfbApiControls for TapUserData {
                 .finalize()?;
 
         let engy_state = EnergyState {
+            // ocpp unused data
             subscription_max: 0,
             imax: 0,
             pmax: 0,
-            tension_max: 0,
+            umax: 0,
+            volts:0,
+            // public data
             session: 10,
             total: 10,
             current: 20,
@@ -219,7 +222,8 @@ fn engy_state_request(
         subscription_max: 0,
         imax: 0,
         pmax: 0,
-        tension_max: 0,
+        umax: 0,
+        vol:0,
         session: ctx.total,
         total: ctx.total,
         current: power / 240,
