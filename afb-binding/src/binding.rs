@@ -63,8 +63,8 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     engy_registers()?;
 
     // create occp manager
-    let evt = AfbEvent::new("msg");
-    let mgr = ManagerHandle::new(rootv4, cid, evt, engy_api);
+    let event = AfbEvent::new("msg");
+    let mgr = ManagerHandle::new(cid, event);
     let config = BindingConfig {
         station,
         engy_api,
@@ -79,9 +79,9 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     // create an register frontend api and register init session callback
     let frontend = AfbApi::new(api)
         .set_info(info)
-        .add_event(evt)
+        .add_event(event)
         .require_api(engy_api)
-        .set_callback(Box::new(ApiUserData { mgr, station, evt, tic }));
+        .set_callback(Box::new(ApiUserData { mgr, station, evt:event, tic }));
 
     register_frontend(frontend, &config)?;
 

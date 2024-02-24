@@ -155,27 +155,6 @@ fn engy_event_action(
     Ok(query)
 }
 
-struct EngyEvtCtx {
-    mgr: &'static ManagerHandle,
-}
-// report value meter to ocpp backend
-AfbEventRegister!(EngyEvtCtrl, engy_event_cb, EngyEvtCtx);
-fn engy_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut EngyEvtCtx) -> Result<(), AfbError> {
-    println! ("**** got engy event");
-    let state = args.get::<&EnergyState>(0)?;
-    afb_log_msg!(Debug, evt, "energy:{:?}", state.clone());
-    let query = engy_event_action(state, ctx.mgr)?;
-
-    AfbSubCall::call_async(
-        evt.get_apiv4(),
-        "OCPP-SND",
-        "MeterValues",
-        v106::MeterValues::Request(query),
-        Box::new(MeterValuesRsp {}),
-    )?;
-    Ok(())
-}
-
 struct EngyMockRqtCtx {
     mgr: &'static ManagerHandle,
 }
@@ -506,10 +485,6 @@ fn subscribe_callback(
 }
 
 pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
-    let engy_handler = AfbEvtHandler::new("energy-evt")
-        .set_pattern(to_static_str(format!("{}/*", config.engy_api)))
-        .set_callback(Box::new(EngyEvtCtx { mgr: config.mgr }))
-        .finalize()?;
 
     let heartbeat_verb = AfbVerb::new("heartbeat")
         .set_callback(Box::new(HeartbeatRqt {}))
@@ -548,7 +523,6 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .finalize()?;
 
     // register veb within API
-    // api.add_evt_handler(engy_handler);
     api.add_verb(authorize_verb);
     api.add_verb(transaction_verb);
     api.add_verb(status_notification_verb);

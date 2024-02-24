@@ -17,24 +17,18 @@ use std::cell::{RefCell, RefMut};
 use typesv4::prelude::*;
 
 pub struct ManagerHandle {
-    apiv4: AfbApiV4,
     event: &'static AfbEvent,
     data_set: RefCell<OcppState>,
-    engy_api: &'static str,
     cid: u32,
 }
 
 impl ManagerHandle {
     pub fn new(
-        apiv4: AfbApiV4,
         cid: u32,
         event: &'static AfbEvent,
-        engy_api: &'static str,
     ) -> &'static mut Self {
         let handle = ManagerHandle {
             data_set: RefCell::new(OcppState::default()),
-            engy_api,
-            apiv4,
             event,
             cid,
         };
@@ -95,20 +89,12 @@ impl ManagerHandle {
         let mut data_set = self.get_state()?;
 
         data_set.tid = tid;
-        //afb_log_msg!(Debug, self.apiv4, "login tid:{} (EnergyAction::SUBSCRIBE)", data_set.tid);
-        //AfbSubCall::call_sync(self.apiv4, self.engy_api, "state", EnergyAction::SUBSCRIBE)?;
         Ok(())
     }
 
     pub fn logout(&self) -> Result<(), AfbError> {
         let mut data_set = self.get_state()?;
         data_set.tid = 0;
-        // AfbSubCall::call_sync(
-        //     self.apiv4,
-        //     self.engy_api,
-        //     "state",
-        //     EnergyAction::UNSUBSCRIBE,
-        // )?;
         Ok(())
     }
 
