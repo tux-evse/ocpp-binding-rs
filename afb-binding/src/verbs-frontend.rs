@@ -548,13 +548,13 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .finalize()?;
 
     // register veb within API
+    // api.add_evt_handler(engy_handler);
     api.add_verb(authorize_verb);
     api.add_verb(transaction_verb);
     api.add_verb(status_notification_verb);
     api.add_verb(engy_state_verb);
     api.add_verb(heartbeat_verb);
     api.add_verb(subscribe_verb);
-    api.add_evt_handler(engy_handler);
 
     Ok(())
 }
