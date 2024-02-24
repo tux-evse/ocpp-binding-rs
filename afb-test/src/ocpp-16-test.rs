@@ -65,7 +65,7 @@ impl AfbApiControls for TapUserData {
             power: 10,
             timestamp: Duration::new(0, 0),
         };
-        let send_measure = AfbTapTest::new("engy-mock-state", self.target, "push-engy-state")
+        let send_measure = AfbTapTest::new("engy-mock-state", self.target, "push-mesure")
             .set_info("send mock measure to backend")
             .set_delay(5000) // wait 5s before pushing this test
             .add_arg(engy_state)? // provide a nonce
@@ -254,9 +254,9 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
     ocpp_registers()?;
     engy_registers()?;
 
-    let state_event = AfbEvent::new("push-engy-state");
+    let state_event = AfbEvent::new("push-mesure");
     let push_verb = AfbVerb::new("energy-state")
-        .set_name("push-state")
+        .set_name("push-mesure")
         .set_info("Mock current energy state event")
         .set_action("['subscribe','unsubscribe']")?
         .set_callback(Box::new(MockEngyEvtCtx {

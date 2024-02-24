@@ -95,20 +95,20 @@ impl ManagerHandle {
         let mut data_set = self.get_state()?;
 
         data_set.tid = tid;
-        afb_log_msg!(Debug, self.apiv4, "login tid:{} (EnergyAction::SUBSCRIBE)", data_set.tid);
-        AfbSubCall::call_sync(self.apiv4, self.engy_api, "state", EnergyAction::SUBSCRIBE)?;
+        //afb_log_msg!(Debug, self.apiv4, "login tid:{} (EnergyAction::SUBSCRIBE)", data_set.tid);
+        //AfbSubCall::call_sync(self.apiv4, self.engy_api, "state", EnergyAction::SUBSCRIBE)?;
         Ok(())
     }
 
     pub fn logout(&self) -> Result<(), AfbError> {
         let mut data_set = self.get_state()?;
         data_set.tid = 0;
-        AfbSubCall::call_sync(
-            self.apiv4,
-            self.engy_api,
-            "state",
-            EnergyAction::UNSUBSCRIBE,
-        )?;
+        // AfbSubCall::call_sync(
+        //     self.apiv4,
+        //     self.engy_api,
+        //     "state",
+        //     EnergyAction::UNSUBSCRIBE,
+        // )?;
         Ok(())
     }
 

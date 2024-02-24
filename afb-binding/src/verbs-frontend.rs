@@ -188,7 +188,7 @@ fn engy_state_request(
 ) -> Result<(), AfbError> {
     let state = args.get::<&EnergyState>(0)?;
 
-    afb_log_msg!(Debug, rqt, "Mock engy state reception");
+    afb_log_msg!(Debug, rqt, "sending energy state:{:?}", state);
     let query = engy_event_action(state, ctx.mgr)?;
 
     AfbSubCall::call_sync(
@@ -536,7 +536,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .set_usage("ocpp-status")
         .finalize()?;
 
-    let engy_state_verb = AfbVerb::new("push-engy-state")
+    let engy_state_verb = AfbVerb::new("push-mesure")
         .set_callback(Box::new(EngyMockRqtCtx { mgr: config.mgr }))
         .set_info("mock engy state event")
         .finalize()?;
