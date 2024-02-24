@@ -187,7 +187,7 @@ fn engy_state_request(
 ) -> Result<(), AfbError> {
     let state = args.get::<&EnergyState>(0)?;
 
-    afb_log_msg!(Debug, rqt, "EngyStateVerb request");
+    afb_log_msg!(Debug, rqt, "Mock engy state reception");
     let query = engy_event_action(state, ctx.mgr)?;
 
     AfbSubCall::call_sync(
@@ -323,7 +323,7 @@ fn transac_start_rsp(
         _ => {
             return afb_error!(
                 "ocpp-transaction-start",
-                "fail auth:{:?}",
+                "fail start:{:?}",
                 response.id_tag_info.status
             )
         }
@@ -535,9 +535,9 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .set_usage("ocpp-status")
         .finalize()?;
 
-    let engy_state_verb = AfbVerb::new("engy-state")
+    let engy_state_verb = AfbVerb::new("push-engy-state")
         .set_callback(Box::new(EngyMockRqtCtx { mgr: config.mgr }))
-        .set_info("testing vern to mock engy state event")
+        .set_info("mock engy state event")
         .finalize()?;
 
     let subscribe_verb = AfbVerb::new("subscribe")

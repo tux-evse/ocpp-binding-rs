@@ -50,21 +50,22 @@ impl AfbApiControls for TapUserData {
                 .add_arg(OcppStatus::Charging)?
                 .finalize()?;
 
-        let send_measure = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
+        let engy_state = EnergyState {
+            subscription_max: 0,
+            imax: 0,
+            pmax: 0,
+            tension_max: 0,
+            session: 10,
+            total: 10,
+            current: 20,
+            tension: 240,
+            power: 10,
+            timestamp: Duration::new(0, 0),
+        };
+        let send_measure = AfbTapTest::new("engy-mock-state", self.target, "push-engy-state")
             .set_info("send mock measure to backend")
             .set_delay(5000) // wait 5s before pushing this test
-            .add_arg(EnergyState {
-                subscription_max: 0,
-                imax: 0,
-                pmax: 0,
-                tension_max: 0,
-                session: 102400,
-                total: 409600,
-                current: 1500,
-                tension: 24000,
-                power: 2200,
-                timestamp: Duration::new(0, 0),
-            })? // provide a nonce
+            .add_arg(engy_state)? // provide a nonce
             .finalize()?;
 
         let finishing_charge = AfbTapTest::new(
@@ -152,39 +153,81 @@ impl AfbApiControls for TapUserData {
     }
 }
 
-AfbVerbRegister!(StateRequestVerb, state_request_cb);
-fn state_request_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
-    match args.get::<&EnergyAction>(0)? {
-        EnergyAction::SUBSCRIBE => {
-            afb_log_msg!(Notice, rqt, "Subscribe");
-        }
-
-        EnergyAction::UNSUBSCRIBE => {
-            afb_log_msg!(Notice, rqt, "Unsubscribe");
-        }
-
-        _ => {
-            return afb_error!(
-                "energy-state-action",
-                "unsupported action should be (subscribe|unsubscribe)"
-            )
-        }
-    }
-    rqt.reply(AFB_NO_DATA, 0);
-    Ok(())
-}
-
 AfbVerbRegister!(ReserveChargerVerb, reserve_charger_cb);
 fn reserve_charger_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     let _reservation = args.get::<&ReservationSession>(0)?;
-    afb_log_msg!(Notice, rqt, "Testing Mock reservation verb");
+    afb_log_msg!(Notice, rqt, "Mock reservation verb");
     rqt.reply(ReservationStatus::Accepted, 0);
     Ok(())
 }
 
 AfbVerbRegister!(ResetChargerVerb, reset_charger_cb);
 fn reset_charger_cb(rqt: &AfbRequest, _args: &AfbData) -> Result<(), AfbError> {
-    afb_log_msg!(Notice, rqt, "Testing Mock reset verb");
+    afb_log_msg!(Notice, rqt, "Mock reset verb");
+    rqt.reply(AFB_NO_DATA, 0);
+    Ok(())
+}
+
+struct SubscribeStateCtx {
+    evt: &'static AfbEvent,
+}
+AfbVerbRegister!(SubscribeStateVerb, subscribe_state_cb, SubscribeStateCtx);
+fn subscribe_state_cb(
+    rqt: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut SubscribeStateCtx,
+) -> Result<(), AfbError> {
+    let args= args.get::<&EnergyAction>(0)?;
+    afb_log_msg!(
+        Notice,
+        rqt,
+        "Mock engy subscribe state args:{:?}",
+        args
+    );
+
+    match args {
+        EnergyAction::SUBSCRIBE => {
+            ctx.evt.subscribe(rqt)?;
+        }
+
+        EnergyAction::UNSUBSCRIBE => {
+            ctx.evt.unsubscribe(rqt)?;
+        }
+        _ => return afb_error!("mock-engy-state", "invalid request:{:?}", args),
+    }
+
+    rqt.reply(AFB_NO_DATA, 0);
+    Ok(())
+}
+
+struct MockEngyEvtCtx {
+    evt: &'static AfbEvent,
+    total: i32,
+}
+// this verb is only for testing purpose real measure should be send from engy event
+AfbVerbRegister!(EngyMockRqt, engy_state_request, MockEngyEvtCtx);
+fn engy_state_request(
+    rqt: &AfbRequest,
+    args: &AfbData,
+    ctx: &mut MockEngyEvtCtx,
+) -> Result<(), AfbError> {
+    let power = args.get::<i32>(0)?;
+    ctx.total = ctx.total + power;
+
+    afb_log_msg!(Debug, rqt, "EngyStateVerb request power:{}", power);
+    let engy_state = EnergyState {
+        subscription_max: 0,
+        imax: 0,
+        pmax: 0,
+        tension_max: 0,
+        session: ctx.total,
+        total: ctx.total,
+        current: power / 240,
+        tension: 240,
+        power: power,
+        timestamp: Duration::new(0, 0),
+    };
+    ctx.evt.push(engy_state);
     rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -207,10 +250,21 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
     ocpp_registers()?;
     engy_registers()?;
 
-    let state_verb = AfbVerb::new("charging-state")
+    let state_event = AfbEvent::new("push-engy-state");
+    let push_verb = AfbVerb::new("energy-state")
+        .set_name("push-state")
+        .set_info("Mock current energy state event")
+        .set_action("['subscribe','unsubscribe']")?
+        .set_callback(Box::new(MockEngyEvtCtx {
+            evt: state_event,
+            total: 0,
+        }))
+        .finalize()?;
+
+    let state_verb = AfbVerb::new("subscribe-state")
         .set_name("state")
-        .set_info("Mock current energy state api")
-        .set_callback(Box::new(StateRequestVerb {}))
+        .set_info("Mock engy state subscription")
+        .set_callback(Box::new(SubscribeStateVerb { evt: state_event }))
         .finalize()?;
 
     let reserve_verb = AfbVerb::new("reserve-charger")
@@ -230,9 +284,11 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
         .set_info("Testing OCPP tap reporting")
         .require_api(target)
         .set_callback(Box::new(tap_config))
+        .add_verb(push_verb)
         .add_verb(state_verb)
         .add_verb(reserve_verb)
         .add_verb(reset_verb)
+        .add_event(state_event)
         .seal(false)
         .finalize()?;
     Ok(api)
