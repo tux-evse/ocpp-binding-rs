@@ -50,7 +50,7 @@ impl AfbApiControls for TapUserData {
                 .add_arg(OcppStatus::Charging)?
                 .finalize()?;
 
-        let engy_state = EnergyState {
+        let mut engy_state = EnergyState {
             // ocpp unused data
             subscription_max: 0,
             imax: 0,
@@ -65,10 +65,18 @@ impl AfbApiControls for TapUserData {
             power: 10,
             timestamp: Duration::new(0, 0),
         };
-        let send_measure = AfbTapTest::new("engy-mock-state", self.target, "push-mesure")
+        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "push-mesure")
             .set_info("send mock measure to backend")
             .set_delay(5000) // wait 5s before pushing this test
-            .add_arg(engy_state)? // provide a nonce
+            .add_arg(engy_state.clone())? // provide a nonce
+            .finalize()?;
+
+        engy_state.current = engy_state.current+10;
+        engy_state.total = engy_state.total+10;
+        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "push-mesure")
+            .set_info("send mock measure to backend")
+            .set_delay(5000) // wait 5s before pushing this test
+            .add_arg(engy_state.clone())? // provide a nonce
             .finalize()?;
 
         let finishing_charge = AfbTapTest::new(
@@ -107,7 +115,8 @@ impl AfbApiControls for TapUserData {
             .add_test(tagid_check)
             .add_test(start_transaction)
             .add_test(start_charge)
-            .add_test(send_measure)
+            .add_test(send_measure_1)
+            .add_test(send_measure_2)
             .add_test(finishing_charge)
             .add_test(stop_transaction)
             .add_test(stop_charge)
@@ -223,7 +232,7 @@ fn engy_state_request(
         imax: 0,
         pmax: 0,
         umax: 0,
-        vol:0,
+        volts:0,
         session: ctx.total,
         total: ctx.total,
         current: power / 240,

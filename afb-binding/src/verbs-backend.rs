@@ -16,13 +16,9 @@ use ocpp::prelude::*;
 use std::time::Duration;
 use typesv4::prelude::*;
 
-
 // Generic callback when ocpp response should be ignored
 AfbVerbRegister!(IgnoreOcppBackendRsp, ignore_backend_rsp);
-fn ignore_backend_rsp(
-    rqt: &AfbRequest,
-    _args: &AfbData,
-) -> Result<(), AfbError> {
+fn ignore_backend_rsp(rqt: &AfbRequest, _args: &AfbData) -> Result<(), AfbError> {
     rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -195,7 +191,6 @@ fn set_charging_profile_cb(
     let data = args.get::<&v106::SetChargingProfile>(0)?;
     match data {
         v106::SetChargingProfile::Request(value) => {
-
             let target_tid = match value.cs_charging_profiles.transaction_id {
                 Some(value) => value,
                 None => -1,
@@ -204,14 +199,42 @@ fn set_charging_profile_cb(
             // to avoid log mess we try to kill any invalid transaction
             let session_tid = ctx.mgr.get_tid()?;
             if target_tid != session_tid {
-                afb_log_msg!(Notice, rqt, "Ignored set-charging-profile backend_tid:{} != session_tid:{}", target_tid, session_tid);
-                let status= v106::ChargingProfileStatus::Rejected;
+                afb_log_msg!(
+                    Notice,
+                    rqt,
+                    "Ignored set-charging-profile backend_tid:{} != session_tid:{}",
+                    target_tid,
+                    session_tid
+                );
+                let status = v106::ChargingProfileStatus::Rejected;
                 let response = v106::SetChargingProfileResponse { status };
                 rqt.reply(v106::SetChargingProfile::Response(response), 0);
-                return Ok(())
+
+                // let force stop invalid transaction ID
+                let query = v106::StopTransactionRequest {
+                    id_tag: None,
+                    meter_stop: 0,
+                    timestamp: get_utc(),
+                    reason: None,
+                    transaction_data: None,
+                    transaction_id: target_tid,
+                };
+
+                AfbSubCall::call_sync(
+                    rqt.get_api(),
+                    "OCPP-SND",
+                    "StopTransaction",
+                    v106::StopTransaction::Request(query),
+                )?;
+                return Ok(());
             }
 
-            afb_log_msg!(Debug, rqt, "Backend set-charging-profile accepted {:?}", value);
+            afb_log_msg!(
+                Debug,
+                rqt,
+                "Backend set-charging-profile accepted {:?}",
+                value
+            );
             let duration = value
                 .cs_charging_profiles
                 .charging_schedule

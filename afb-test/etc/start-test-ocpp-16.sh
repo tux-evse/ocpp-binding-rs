@@ -14,6 +14,7 @@ mkdir -p /tmp/api
 
 DEVTOOL_PORT=1235
 echo Ocpp debug mode config=$CONFDIR/*.json port=$DEVTOOL_PORT
+echo "clear && cargo build --example ocpp_test"
 
 afb-binder --name=afb-ocpp --port=$DEVTOOL_PORT -v \
   --config=$ROOTDIR/../afb-binding/etc/binder-ocpp.json \

@@ -310,6 +310,7 @@ fn transac_start_rsp(
             )
         }
     };
+    afb_log_msg!(Debug, rqt, "Transaction Start accepted tid:{}", tid);
     ctx.mgr.login(tid)?;
     rqt.reply(tid, 0);
     Ok(())
@@ -331,6 +332,7 @@ fn transac_stop_rsp(
         _ => return afb_error!("ocpp-transaction-stop", "invalid response type"),
     };
 
+    afb_log_msg!(Debug, rqt, "Transaction Stop accepted");
     ctx.mgr.logout()?;
     rqt.reply(AFB_NO_DATA, 0);
     Ok(())
@@ -349,7 +351,7 @@ fn transaction_request(
     let data = args.get::<&OcppTransaction>(0)?;
     match data {
         OcppTransaction::Start(tag) => {
-            afb_log_msg!(Debug, rqt, "Start Transaction request");
+            afb_log_msg!(Debug, rqt, "Transaction Start request");
             ctx.mgr.check_active_session(false)?;
             let query = v106::StartTransactionRequest {
                 connector_id: ctx.mgr.get_cid(),
@@ -368,7 +370,8 @@ fn transaction_request(
             )?;
         }
         OcppTransaction::Stop(meter) => {
-            afb_log_msg!(Debug, rqt, "Stop Transaction request");
+            let tid= ctx.mgr.get_tid()?;
+            afb_log_msg!(Debug, rqt, "Transaction Stop request tid:{}", tid);
             ctx.mgr.check_active_session(true)?;
             let query = v106::StopTransactionRequest {
                 id_tag: None,
@@ -376,7 +379,7 @@ fn transaction_request(
                 timestamp: get_utc(),
                 reason: None,
                 transaction_data: None,
-                transaction_id: ctx.mgr.get_tid()?,
+                transaction_id: tid,
             };
 
             AfbSubCall::call_async(
