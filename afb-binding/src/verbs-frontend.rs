@@ -83,16 +83,6 @@ fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), 
     Ok(())
 }
 
-AfbCallRegister!(MeterValuesRsp, meter_values_response);
-fn meter_values_response(_api: &AfbApi, args: &AfbData) -> Result<(), AfbError> {
-    let data = args.get::<&v106::MeterValues>(0)?;
-    match data {
-        v106::MeterValues::Response(_response) => {}
-        _ => return afb_error!("ocpp-metervalue-rsp", "invalid response type"),
-    };
-    Ok(())
-}
-
 // ref: https://www.ampcontrol.io/ocpp-guide/how-to-send-ocpp-meter-values-with-metervalues-req
 fn engy_event_action(
     state: &EnergyState,
@@ -155,28 +145,40 @@ fn engy_event_action(
     Ok(query)
 }
 
-struct EngyMockRqtCtx {
+// async callback for pushing measures
+AfbVerbRegister!(MeterValuesRsp, meter_values_response);
+fn meter_values_response(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+    let data = args.get::<&v106::MeterValues>(0)?;
+    match data {
+        v106::MeterValues::Response(response) => {response}
+        _ => return afb_error!("ocpp-metervalue-rsp", "invalid response type"),
+    };
+    rqt.reply(AFB_NO_DATA, 0);
+    Ok(())
+}
+
+struct EngyStateRqtCtx {
     mgr: &'static ManagerHandle,
 }
 // this verb is only for testing purpose real measure should be send from engy event
-AfbVerbRegister!(EngyMockRqt, engy_state_request, EngyMockRqtCtx);
+AfbVerbRegister!(EngyStateRqt, engy_state_request, EngyStateRqtCtx);
 fn engy_state_request(
     rqt: &AfbRequest,
     args: &AfbData,
-    ctx: &mut EngyMockRqtCtx,
+    ctx: &mut EngyStateRqtCtx,
 ) -> Result<(), AfbError> {
     let state = args.get::<&EnergyState>(0)?;
 
     afb_log_msg!(Debug, rqt, "sending energy state:{:?}", state);
     let query = engy_event_action(state, ctx.mgr)?;
 
-    AfbSubCall::call_sync(
-        rqt.get_api().get_apiv4(),
+    AfbSubCall::call_async(
+        rqt,
         "OCPP-SND",
         "MeterValues",
         v106::MeterValues::Request(query),
+        Box::new(MeterValuesRsp{}),
     )?;
-    rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
 
@@ -512,7 +514,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .finalize()?;
 
     let engy_state_verb = AfbVerb::new("push-mesure")
-        .set_callback(Box::new(EngyMockRqtCtx { mgr: config.mgr }))
+        .set_callback(Box::new(EngyStateRqtCtx { mgr: config.mgr }))
         .set_info("mock engy state event")
         .finalize()?;
 
