@@ -57,12 +57,12 @@ impl AfbApiControls for TapUserData {
             pmax: 0,
             umax: 0,
             volts:0,
-            // public data
-            session: 10,
-            total: 10,
-            current: 20,
-            tension: 240,
-            power: 10,
+            // public data unit= real-value*100
+            session: 1000,
+            total: 1000,
+            current: 2000,
+            tension: 24000,
+            power: 1000,
             timestamp: Duration::new(0, 0),
         };
         let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "push-mesure")
@@ -93,10 +93,10 @@ impl AfbApiControls for TapUserData {
         let stop_transaction = AfbTapTest::new("transaction-stop", self.target, "transaction")
             .set_info("send stop transaction")
             .set_delay(10000) // wait 10s before pushing this test
-            .add_arg(OcppTransaction::Stop(1234))?
+            .add_arg(OcppTransaction::Stop(engy_state.total))?
             .finalize()?;
 
-        let stop_charge = AfbTapTest::new("notify-charge-end", self.target, "status-notification")
+        let stopped_charge = AfbTapTest::new("set_status-available", self.target, "status-notification")
             .set_info("send available notification")
             .add_arg(OcppStatus::Available)?
             .finalize()?;
@@ -119,7 +119,7 @@ impl AfbApiControls for TapUserData {
             .add_test(send_measure_2)
             .add_test(finishing_charge)
             .add_test(stop_transaction)
-            .add_test(stop_charge)
+            .add_test(stopped_charge)
             .add_test(heartbeat_stop)
             .set_autorun(self.autostart)
             .set_autoexit(self.autoexit)

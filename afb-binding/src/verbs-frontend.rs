@@ -141,7 +141,6 @@ fn engy_event_action(
             sampled_value: vec![tension_value, power_value, current_value, session_value],
         }],
     };
-
     Ok(query)
 }
 
@@ -153,6 +152,7 @@ fn meter_values_response(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbErro
         v106::MeterValues::Response(response) => {response}
         _ => return afb_error!("ocpp-metervalue-rsp", "invalid response type"),
     };
+    afb_log_msg!(Debug, rqt, "MeterValues response accepted");
     rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -169,8 +169,8 @@ fn engy_state_request(
 ) -> Result<(), AfbError> {
     let state = args.get::<&EnergyState>(0)?;
 
-    afb_log_msg!(Debug, rqt, "sending energy state:{:?}", state);
     let query = engy_event_action(state, ctx.mgr)?;
+    afb_log_msg!(Debug, rqt, "MeterValues request: {:?}", query);
 
     AfbSubCall::call_async(
         rqt,
@@ -200,7 +200,7 @@ fn heartbeat_response(
     afb_log_msg!(
         Debug,
         rqt,
-        "Heartbeat request nonce:{} time={}",
+        "Heartbeat response nonce:{} time={}",
         ctx.nonce,
         response.current_time
     );
@@ -351,7 +351,6 @@ fn transaction_request(
     let data = args.get::<&OcppTransaction>(0)?;
     match data {
         OcppTransaction::Start(tag) => {
-            afb_log_msg!(Debug, rqt, "Transaction Start request");
             ctx.mgr.check_active_session(false)?;
             let query = v106::StartTransactionRequest {
                 connector_id: ctx.mgr.get_cid(),
@@ -361,6 +360,7 @@ fn transaction_request(
                 timestamp: get_utc(),
             };
 
+            afb_log_msg!(Debug, rqt, "Transaction Start request: {:?}", &query);
             AfbSubCall::call_async(
                 rqt,
                 "OCPP-SND",
@@ -371,7 +371,6 @@ fn transaction_request(
         }
         OcppTransaction::Stop(meter) => {
             let tid= ctx.mgr.get_tid()?;
-            afb_log_msg!(Debug, rqt, "Transaction Stop request tid:{}", tid);
             ctx.mgr.check_active_session(true)?;
             let query = v106::StopTransactionRequest {
                 id_tag: None,
@@ -381,6 +380,7 @@ fn transaction_request(
                 transaction_data: None,
                 transaction_id: tid,
             };
+            afb_log_msg!(Debug, rqt, "Transaction Stop request {:?}", &query);
 
             AfbSubCall::call_async(
                 rqt,
