@@ -53,10 +53,11 @@ pub enum OcppErrorCode {
     WeakSignal,
 }
 
-AfbDataConverter!(ocpp_status, OcppStatus);
+AfbDataConverter!(ocpp_charger_status, OcppChargerStatus);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
-pub enum OcppStatus {
+pub enum OcppChargerStatus {
+    Preparing,
     Charging,
     Reserved,
     Unavailable,
@@ -74,6 +75,7 @@ pub struct OcppState {
     pub tid: i32,
     pub reservation: Option<ReservationSession>,
     pub authorized: bool,
+    pub status: OcppChargerStatus,
 }
 
 impl OcppState {
@@ -83,6 +85,7 @@ impl OcppState {
             tid: 0,
             reservation: None,
             authorized: false,
+            status: OcppChargerStatus::Preparing,
         }
     }
 }
@@ -91,7 +94,7 @@ pub fn ocpp_registers() -> Result<(), AfbError> {
     ocpp_msg::register()?;
     ocpp_state::register()?;
     ocpp_transaction::register()?;
-    ocpp_status::register()?;
+    ocpp_charger_status::register()?;
 
     Ok(())
 }

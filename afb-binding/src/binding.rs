@@ -40,7 +40,7 @@ fn monitoring_event_cb(evt: &AfbEventMsg, args: &AfbData) -> Result<(), AfbError
 impl AfbApiControls for ApiUserData {
     // the API is created and ready. At this level user may subcall api(s) declare as dependencies
     fn start(&mut self, api: &AfbApi) -> Result<(), AfbError> {
-        ocpp_bootstrap(api, self.station, self.tic)?;
+        ocpp_bootstrap(api, self.mgr,self.station, self.tic)?;
         self.evt.push (OcppMsg::Initialized);
         AfbSubCall::call_sync(
         api,

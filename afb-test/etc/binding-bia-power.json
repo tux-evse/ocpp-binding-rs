@@ -12,7 +12,7 @@
             "path": "${CARGO_TARGET_DIR}debug/libafb_ocpp.so",
             "info": "RUST OCPP-16 frontend client",
             "cid": 1,
-            "tic": 0,
+            "tic": 30000,
             "chmgr_api": "ocpp-test",
             "engy_api": "ocpp-test",
         }

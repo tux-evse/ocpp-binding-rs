@@ -13,7 +13,7 @@
 //use crate::prelude::*;
 use crate::prelude::*;
 use afbv4::prelude::*;
-use std::cell::{RefCell, RefMut};
+use std::cell::{RefCell, RefMut,Ref};
 use typesv4::prelude::*;
 
 pub struct ManagerHandle {
@@ -38,9 +38,17 @@ impl ManagerHandle {
     }
 
     #[track_caller]
+    pub fn check_state(&self) -> Result<Ref<'_, OcppState>, AfbError> {
+        match self.data_set.try_borrow() {
+            Err(_) => return afb_error!("ocpp-mgr-check-state", "fail to access &data_set"),
+            Ok(value) => Ok(value),
+        }
+    }
+
+    #[track_caller]
     pub fn get_state(&self) -> Result<RefMut<'_, OcppState>, AfbError> {
         match self.data_set.try_borrow_mut() {
-            Err(_) => return afb_error!("ocppmanager-update", "fail to access &mut data_set"),
+            Err(_) => return afb_error!("ocpp-mgr-get-state", "fail to access &mut data_set"),
             Ok(value) => Ok(value),
         }
     }
@@ -55,7 +63,7 @@ impl ManagerHandle {
     }
 
     pub fn check_active_session(&self, status: bool) -> Result<(), AfbError> {
-        let data_set = self.get_state()?;
+        let data_set = self.check_state()?;
         if status && data_set.tid == 0 {
             return afb_error!("ocpp-active-session", "No active session tid");
         }
@@ -73,8 +81,19 @@ impl ManagerHandle {
         self.cid
     }
 
+    pub fn set_status(&self, status: &OcppChargerStatus) -> Result<(), AfbError> {
+        let mut data_set = self.get_state()?;
+        data_set.status= status.clone();
+        Ok(())
+    }
+
+    pub fn get_status(&self) -> Result<OcppChargerStatus, AfbError> {
+        let data_set = self.check_state()?;
+        Ok(data_set.status.clone())
+    }
+
     pub fn get_tid(&self) -> Result<i32, AfbError> {
-        let data_set = self.get_state()?;
+        let data_set = self.check_state()?;
         Ok(data_set.tid)
     }
 
@@ -142,7 +161,7 @@ impl ManagerHandle {
     }
 
     pub fn set_limit(&self, limit: PowerLimit) -> Result<v106::ChargingProfileStatus, AfbError> {
-        let data_set = self.get_state()?;
+        let data_set = self.check_state()?;
 
         let response = if limit.tid != data_set.tid {
             v106::ChargingProfileStatus::Rejected

@@ -15,8 +15,51 @@ use afbv4::prelude::*;
 use ocpp::prelude::*;
 use typesv4::prelude::*;
 
+AfbCallRegister!(IgnoreResponseCtrl, ignore_timer_rsp);
+fn ignore_timer_rsp(_api: &AfbApi, _args: &AfbData) -> Result<(), AfbError> {
+    Ok(())
+}
+
+struct TimerCtx {
+    apiv4: AfbApiV4,
+    mgr: &'static ManagerHandle,
+}
+// ping server every tic-ms to keep ocpp connection live (Warning: not supported by biapower backend)
+AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
+fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), AfbError> {
+    // AfbSubCall::call_async(
+    //     ctx.apiv4,
+    //     "OCPP-SND",
+    //     "Heartbeat",
+    //     v106::Heartbeat::Request(v106::HeartbeatRequest {}
+    //      Box::new (IgnoreResponseCtrl{}),
+    // )?;
+
+    // keep updating 'available' charger status for OCPP not to forget about us
+    let status= ctx.mgr.get_status()?;
+    match status {
+        OcppChargerStatus::Available => {},
+        _ => return Ok(())
+    }
+
+    let query= update_charger_status(ctx.mgr, &status)?;
+    AfbSubCall::call_async(
+        ctx.apiv4,
+        "OCPP-SND",
+        "StatusNotification",
+        v106::StatusNotification::Request(query),
+        Box::new (IgnoreResponseCtrl{}),
+    )?;
+    Ok(())
+}
+
 // init ocpp backend at API initialization time
-pub fn ocpp_bootstrap(api: &AfbApi, station: &str, tic: u32) -> Result<(), AfbError> {
+pub fn ocpp_bootstrap(
+    api: &AfbApi,
+    mgr: &'static ManagerHandle,
+    station: &str,
+    tic: u32,
+) -> Result<(), AfbError> {
     AfbSubCall::call_sync(
         api,
         "OCPP-SND",
@@ -62,25 +105,56 @@ pub fn ocpp_bootstrap(api: &AfbApi, station: &str, tic: u32) -> Result<(), AfbEr
             .set_decount(0)
             .set_callback(Box::new(TimerCtx {
                 apiv4: api.get_apiv4(),
+                mgr,
             }))
             .start()?;
     }
     Ok(())
 }
 
-struct TimerCtx {
-    apiv4: AfbApiV4,
-}
-// ping server every tic-ms to keep ocpp connection live (Warning: not supported by biapower backend)
-AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
-fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), AfbError> {
-    AfbSubCall::call_sync(
-        ctx.apiv4,
-        "OCPP-SND",
-        "Heartbeat",
-        v106::Heartbeat::Request(v106::HeartbeatRequest {}),
-    )?;
-    Ok(())
+fn update_charger_status(mgr: &ManagerHandle, status: &OcppChargerStatus) -> Result <v106::StatusNotificationRequest, AfbError> {
+        let mut error_code = v106::ChargePointErrorCode::NoError;
+
+        let charger_status = match status {
+        OcppChargerStatus::Charging => v106::ChargePointStatus::Charging,
+        OcppChargerStatus::Reserved => v106::ChargePointStatus::Reserved,
+        OcppChargerStatus::Unavailable => v106::ChargePointStatus::Unavailable,
+        OcppChargerStatus::Available => v106::ChargePointStatus::Available,
+        OcppChargerStatus::Finishing => v106::ChargePointStatus::Finishing,
+        OcppChargerStatus::Preparing => v106::ChargePointStatus::Preparing,
+        OcppChargerStatus::Error(err_code) => {
+            error_code = match err_code {
+                OcppErrorCode::ConnectorLockFailure => {
+                    v106::ChargePointErrorCode::ConnectorLockFailure
+                }
+                OcppErrorCode::GroundFailure => v106::ChargePointErrorCode::GroundFailure,
+                OcppErrorCode::HighTemperature => v106::ChargePointErrorCode::HighTemperature,
+                OcppErrorCode::InternalError => v106::ChargePointErrorCode::InternalError,
+                OcppErrorCode::NoError => v106::ChargePointErrorCode::NoError,
+                OcppErrorCode::OtherError => v106::ChargePointErrorCode::OtherError,
+                OcppErrorCode::OverCurrentFailure => v106::ChargePointErrorCode::OverCurrentFailure,
+                OcppErrorCode::OverVoltage => v106::ChargePointErrorCode::OverVoltage,
+                OcppErrorCode::PowerMeterFailure => v106::ChargePointErrorCode::PowerMeterFailure,
+                OcppErrorCode::PowerSwitchFailure => v106::ChargePointErrorCode::PowerSwitchFailure,
+                OcppErrorCode::ReaderFailure => v106::ChargePointErrorCode::ReaderFailure,
+                OcppErrorCode::UnderVoltage => v106::ChargePointErrorCode::UnderVoltage,
+                OcppErrorCode::WeakSignal => v106::ChargePointErrorCode::WeakSignal,
+            };
+            v106::ChargePointStatus::Faulted
+        }
+    };
+
+    let query = v106::StatusNotificationRequest {
+        connector_id: mgr.get_cid(),
+        error_code: error_code, // IdToken, should this be a type?
+        status: charger_status,
+        info: None,
+        timestamp: Some(get_utc()),
+        vendor_id: None,
+        vendor_error_code: None,
+    };
+
+    Ok(query)
 }
 
 // ref: https://www.ampcontrol.io/ocpp-guide/how-to-send-ocpp-meter-values-with-metervalues-req
@@ -149,7 +223,7 @@ AfbVerbRegister!(MeterValuesRsp, meter_values_response);
 fn meter_values_response(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     let data = args.get::<&v106::MeterValues>(0)?;
     match data {
-        v106::MeterValues::Response(response) => {response}
+        v106::MeterValues::Response(response) => response,
         _ => return afb_error!("ocpp-metervalue-rsp", "invalid response type"),
     };
     afb_log_msg!(Debug, rqt, "MeterValues response accepted");
@@ -177,7 +251,7 @@ fn engy_state_request(
         "OCPP-SND",
         "MeterValues",
         v106::MeterValues::Request(query),
-        Box::new(MeterValuesRsp{}),
+        Box::new(MeterValuesRsp {}),
     )?;
     Ok(())
 }
@@ -370,7 +444,7 @@ fn transaction_request(
             )?;
         }
         OcppTransaction::Stop(meter) => {
-            let tid= ctx.mgr.get_tid()?;
+            let tid = ctx.mgr.get_tid()?;
             ctx.mgr.check_active_session(true)?;
             let query = v106::StopTransactionRequest {
                 id_tag: None,
@@ -422,44 +496,9 @@ fn status_notification_rqt(
     ctx: &mut StatusNotificationRqtCtx,
 ) -> Result<(), AfbError> {
     // move from binding to ocpp status
-    let mut error_code = v106::ChargePointErrorCode::NoError;
-    let charger_status = match args.get::<&OcppStatus>(0)? {
-        OcppStatus::Charging => v106::ChargePointStatus::Charging,
-        OcppStatus::Reserved => v106::ChargePointStatus::Reserved,
-        OcppStatus::Unavailable => v106::ChargePointStatus::Unavailable,
-        OcppStatus::Available => v106::ChargePointStatus::Available,
-        OcppStatus::Finishing => v106::ChargePointStatus::Finishing,
-        OcppStatus::Error(err_code) => {
-            error_code = match err_code {
-                OcppErrorCode::ConnectorLockFailure => {
-                    v106::ChargePointErrorCode::ConnectorLockFailure
-                }
-                OcppErrorCode::GroundFailure => v106::ChargePointErrorCode::GroundFailure,
-                OcppErrorCode::HighTemperature => v106::ChargePointErrorCode::HighTemperature,
-                OcppErrorCode::InternalError => v106::ChargePointErrorCode::InternalError,
-                OcppErrorCode::NoError => v106::ChargePointErrorCode::NoError,
-                OcppErrorCode::OtherError => v106::ChargePointErrorCode::OtherError,
-                OcppErrorCode::OverCurrentFailure => v106::ChargePointErrorCode::OverCurrentFailure,
-                OcppErrorCode::OverVoltage => v106::ChargePointErrorCode::OverVoltage,
-                OcppErrorCode::PowerMeterFailure => v106::ChargePointErrorCode::PowerMeterFailure,
-                OcppErrorCode::PowerSwitchFailure => v106::ChargePointErrorCode::PowerSwitchFailure,
-                OcppErrorCode::ReaderFailure => v106::ChargePointErrorCode::ReaderFailure,
-                OcppErrorCode::UnderVoltage => v106::ChargePointErrorCode::UnderVoltage,
-                OcppErrorCode::WeakSignal => v106::ChargePointErrorCode::WeakSignal,
-            };
-            v106::ChargePointStatus::Faulted
-        }
-    };
-
-    let query = v106::StatusNotificationRequest {
-        connector_id: ctx.mgr.get_cid(),
-        error_code: error_code, // IdToken, should this be a type?
-        status: charger_status,
-        info: None,
-        timestamp: Some(get_utc()),
-        vendor_id: None,
-        vendor_error_code: None,
-    };
+    let status= args.get::<&OcppChargerStatus>(0)?;
+    ctx.mgr.set_status(&status)?;
+    let query= update_charger_status(ctx.mgr, &status)?;
 
     afb_log_msg!(Debug, rqt, "Status Notification update{:?}", &query);
     AfbSubCall::call_async(
@@ -472,10 +511,8 @@ fn status_notification_rqt(
     Ok(())
 }
 
-
 struct SubscribeData {
     mgr: &'static ManagerHandle,
-
 }
 
 AfbVerbRegister!(SubscribeCtrl, subscribe_callback, SubscribeData);
@@ -491,7 +528,6 @@ fn subscribe_callback(
 }
 
 pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
-
     let heartbeat_verb = AfbVerb::new("heartbeat")
         .set_callback(Box::new(HeartbeatRqt {}))
         .set_info("Request ping backend")
@@ -523,7 +559,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .finalize()?;
 
     let subscribe_verb = AfbVerb::new("subscribe")
-        .set_callback(Box::new(SubscribeCtrl { mgr: config.mgr  }))
+        .set_callback(Box::new(SubscribeCtrl { mgr: config.mgr }))
         .set_info("subscribe auth-msg event")
         .set_usage("true|false")
         .finalize()?;

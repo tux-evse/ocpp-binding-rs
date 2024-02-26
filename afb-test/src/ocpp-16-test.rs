@@ -47,7 +47,7 @@ impl AfbApiControls for TapUserData {
         let start_charge =
             AfbTapTest::new("notify-charge-start", self.target, "status-notification")
                 .set_info("send charging notification")
-                .add_arg(OcppStatus::Charging)?
+                .add_arg(OcppChargerStatus::Charging)?
                 .finalize()?;
 
         let mut engy_state = EnergyState {
@@ -86,7 +86,7 @@ impl AfbApiControls for TapUserData {
         )
         .set_info("send available notification")
         .set_delay(10000) // wait 30s before pushing this test
-        .add_arg(OcppStatus::Finishing)?
+        .add_arg(OcppChargerStatus::Finishing)?
         .finalize()?;
 
         // stop transaction send consumes power
@@ -98,7 +98,7 @@ impl AfbApiControls for TapUserData {
 
         let stopped_charge = AfbTapTest::new("set_status-available", self.target, "status-notification")
             .set_info("send available notification")
-            .add_arg(OcppStatus::Available)?
+            .add_arg(OcppChargerStatus::Available)?
             .finalize()?;
 
         // wait before closing the connection (time to check backend->charger request)
