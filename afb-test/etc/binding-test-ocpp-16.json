@@ -10,7 +10,8 @@
             "target": "ocpp-16",
             "autostart": true,
             "autoexit": false,
-            "output": "tap"
+            "output": "tap",
+            "verbosity": 9
         }
     ]
 }
