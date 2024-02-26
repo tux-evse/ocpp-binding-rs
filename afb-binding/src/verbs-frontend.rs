@@ -461,6 +461,7 @@ fn status_notification_rqt(
         vendor_error_code: None,
     };
 
+    afb_log_msg!(Debug, rqt, "Status Notification update{:?}", &query);
     AfbSubCall::call_async(
         rqt,
         "OCPP-SND",
