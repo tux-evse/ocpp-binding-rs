@@ -118,7 +118,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
     };
 
     let monitoring_handler = AfbEvtHandler::new("monitoring-evt")
-        .set_pattern(to_static_str(format!("monitoring/disconnected")))
+        .set_pattern("monitor/disconnected")
         .set_callback(Box::new(MonitoringEvtCtrl {}))
         .finalize()?;
 

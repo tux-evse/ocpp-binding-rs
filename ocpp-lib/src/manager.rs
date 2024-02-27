@@ -38,14 +38,6 @@ impl ManagerHandle {
     }
 
     #[track_caller]
-    pub fn check_state(&self) -> Result<Ref<'_, OcppState>, AfbError> {
-        match self.data_set.try_borrow() {
-            Err(_) => return afb_error!("ocpp-mgr-check-state", "fail to access &data_set"),
-            Ok(value) => Ok(value),
-        }
-    }
-
-    #[track_caller]
     pub fn get_state(&self) -> Result<MutexGuard<'_, OcppState>, AfbError> {
         let guard = self.data_set.lock().unwrap();
         Ok(guard)
@@ -61,7 +53,7 @@ impl ManagerHandle {
     }
 
     pub fn check_active_session(&self, status: bool) -> Result<(), AfbError> {
-        let data_set = self.check_state()?;
+        let data_set = self.get_state()?;
         if status && data_set.tid == 0 {
             return afb_error!("ocpp-active-session", "No active session tid");
         }
@@ -86,12 +78,12 @@ impl ManagerHandle {
     }
 
     pub fn get_status(&self) -> Result<OcppChargerStatus, AfbError> {
-        let data_set = self.check_state()?;
+        let data_set = self.get_state()?;
         Ok(data_set.status.clone())
     }
 
     pub fn get_tid(&self) -> Result<i32, AfbError> {
-        let data_set = self.check_state()?;
+        let data_set = self.get_state()?;
         Ok(data_set.tid)
     }
 
@@ -159,7 +151,7 @@ impl ManagerHandle {
     }
 
     pub fn set_limit(&self, limit: PowerLimit) -> Result<v106::ChargingProfileStatus, AfbError> {
-        let data_set = self.check_state()?;
+        let data_set = self.get_state()?;
 
         let response = if limit.tid != data_set.tid {
             v106::ChargingProfileStatus::Rejected
