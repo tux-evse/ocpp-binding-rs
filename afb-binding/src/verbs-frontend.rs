@@ -193,7 +193,7 @@ fn engy_event_action(
         context: None,  // string
         phase: None,    // default L1
         format: None,   // default Raw
-        unit: Some(v106::UnitOfMeasure::Kw),
+        unit: Some(v106::UnitOfMeasure::W),
         measurand: Some(v106::Measurand::PowerActiveImport),
     };
 
@@ -203,7 +203,7 @@ fn engy_event_action(
         context: None,  // string
         phase: None,    // default L1
         format: None,   // default Raw
-        unit: Some(v106::UnitOfMeasure::KWh),
+        unit: Some(v106::UnitOfMeasure::Wh),
         measurand: Some(v106::Measurand::EnergyActiveImportRegister),
     };
 
@@ -553,7 +553,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .set_usage("ocpp-status")
         .finalize()?;
 
-    let engy_state_verb = AfbVerb::new("push-mesure")
+    let engy_state_verb = AfbVerb::new("push-measure")
         .set_callback(Box::new(EngyStateRqtCtx { mgr: config.mgr }))
         .set_info("mock engy state event")
         .finalize()?;
