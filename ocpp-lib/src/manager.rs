@@ -13,12 +13,12 @@
 //use crate::prelude::*;
 use crate::prelude::*;
 use afbv4::prelude::*;
-use std::cell::{RefCell, RefMut,Ref};
+use std::sync::{Mutex, MutexGuard};
 use typesv4::prelude::*;
 
 pub struct ManagerHandle {
     event: &'static AfbEvent,
-    data_set: RefCell<OcppState>,
+    data_set: Mutex<OcppState>,
     cid: u32,
 }
 
@@ -28,7 +28,7 @@ impl ManagerHandle {
         event: &'static AfbEvent,
     ) -> &'static mut Self {
         let handle = ManagerHandle {
-            data_set: RefCell::new(OcppState::default()),
+            data_set: Mutex::new(OcppState::default()),
             event,
             cid,
         };
@@ -46,11 +46,9 @@ impl ManagerHandle {
     }
 
     #[track_caller]
-    pub fn get_state(&self) -> Result<RefMut<'_, OcppState>, AfbError> {
-        match self.data_set.try_borrow_mut() {
-            Err(_) => return afb_error!("ocpp-mgr-get-state", "fail to access &mut data_set"),
-            Ok(value) => Ok(value),
-        }
+    pub fn get_state(&self) -> Result<MutexGuard<'_, OcppState>, AfbError> {
+        let guard = self.data_set.lock().unwrap();
+        Ok(guard)
     }
 
     pub fn subscribe(&self, request: &AfbRequest, subscription: bool) -> Result<(), AfbError> {

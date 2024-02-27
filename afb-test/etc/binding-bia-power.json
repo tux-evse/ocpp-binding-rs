@@ -15,6 +15,7 @@
             "tic": 30000,
             "chmgr_api": "ocpp-test",
             "engy_api": "ocpp-test",
+            "verbosity":9
         }
     ]
 }
