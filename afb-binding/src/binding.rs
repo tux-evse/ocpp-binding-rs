@@ -29,14 +29,6 @@ pub struct ApiUserData {
     pub tic: u32,
 }
 
-
-AfbEventRegister!(MonitoringEvtCtrl, monitoring_event_cb);
-fn monitoring_event_cb(evt: &AfbEventMsg, args: &AfbData) -> Result<(), AfbError> {
-    let msg = args.get::<String>(0)?;
-    afb_log_msg!(Warning, evt, "monitoring_evt:{:?}", msg);
-    Ok(())
-}
-
 impl AfbApiControls for ApiUserData {
     // the API is created and ready. At this level user may subcall api(s) declare as dependencies
     fn start(&mut self, api: &AfbApi) -> Result<(), AfbError> {
@@ -117,12 +109,6 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         frontend.set_verbosity(value);
     };
 
-    let monitoring_handler = AfbEvtHandler::new("monitor-evt")
-        .set_pattern("monitor/disconnected")
-        .set_callback(Box::new(MonitoringEvtCtrl {}))
-        .finalize()?;
-
-    frontend.add_evt_handler(monitoring_handler);
     backend.finalize()?;
     Ok(frontend.finalize()?)
 }

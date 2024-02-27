@@ -65,7 +65,7 @@ impl AfbApiControls for TapUserData {
             power: 1000,
             timestamp: Duration::new(0, 0),
         };
-        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "push-mesure")
+        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "push-measure")
             .set_info("send mock measure to backend")
             .set_delay(5000) // wait 5s before pushing this test
             .add_arg(engy_state.clone())? // provide a nonce
@@ -73,7 +73,7 @@ impl AfbApiControls for TapUserData {
 
         engy_state.current = engy_state.current+10;
         engy_state.total = engy_state.total+10;
-        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "push-mesure")
+        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "push-measure")
             .set_info("send mock measure to backend")
             .set_delay(5000) // wait 5s before pushing this test
             .add_arg(engy_state.clone())? // provide a nonce

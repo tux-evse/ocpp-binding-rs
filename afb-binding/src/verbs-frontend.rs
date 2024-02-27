@@ -20,6 +20,32 @@ fn ignore_timer_rsp(_api: &AfbApi, _args: &AfbData) -> Result<(), AfbError> {
     Ok(())
 }
 
+struct MonitorEvtCtx{
+    mgr: &'static ManagerHandle,
+}
+AfbEventRegister!(MonitorEvtCtrl, monitor_event_cb,MonitorEvtCtx );
+fn monitor_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut MonitorEvtCtx) -> Result<(), AfbError> {
+    let status = ctx.mgr.get_status()?;
+    let msg = args.get::<String>(0)?;
+    afb_log_msg!(
+        Warning,
+        evt,
+        "monitor_evt ocpp server websocket reset evt:{:?} status:{:?}",
+        msg, &status
+    );
+
+    let query = update_charger_status(ctx.mgr, &status)?;
+    AfbSubCall::call_async(
+        evt.get_apiv4(),
+        "OCPP-SND",
+        "StatusNotification",
+        v106::StatusNotification::Request(query),
+        Box::new(IgnoreResponseCtrl {}),
+    )?;
+
+    Ok(())
+}
+
 struct TimerCtx {
     apiv4: AfbApiV4,
     mgr: &'static ManagerHandle,
@@ -27,28 +53,21 @@ struct TimerCtx {
 // ping server every tic-ms to keep ocpp connection live (Warning: not supported by biapower backend)
 AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
 fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), AfbError> {
-    // AfbSubCall::call_async(
-    //     ctx.apiv4,
-    //     "OCPP-SND",
-    //     "Heartbeat",
-    //     v106::Heartbeat::Request(v106::HeartbeatRequest {}
-    //      Box::new (IgnoreResponseCtrl{}),
-    // )?;
 
     // keep updating 'available' charger status for OCPP not to forget about us
-    let status= ctx.mgr.get_status()?;
+    let status = ctx.mgr.get_status()?;
     match status {
-        OcppChargerStatus::Available => {},
-        _ => return Ok(())
+        OcppChargerStatus::Available => {}
+        _ => return Ok(()),
     }
 
-    let query= update_charger_status(ctx.mgr, &status)?;
+    let query = update_charger_status(ctx.mgr, &status)?;
     AfbSubCall::call_async(
         ctx.apiv4,
         "OCPP-SND",
         "StatusNotification",
         v106::StatusNotification::Request(query),
-        Box::new (IgnoreResponseCtrl{}),
+        Box::new(IgnoreResponseCtrl {}),
     )?;
     Ok(())
 }
@@ -112,10 +131,13 @@ pub fn ocpp_bootstrap(
     Ok(())
 }
 
-fn update_charger_status(mgr: &ManagerHandle, status: &OcppChargerStatus) -> Result <v106::StatusNotificationRequest, AfbError> {
-        let mut error_code = v106::ChargePointErrorCode::NoError;
+fn update_charger_status(
+    mgr: &ManagerHandle,
+    status: &OcppChargerStatus,
+) -> Result<v106::StatusNotificationRequest, AfbError> {
+    let mut error_code = v106::ChargePointErrorCode::NoError;
 
-        let charger_status = match status {
+    let charger_status = match status {
         OcppChargerStatus::Charging => v106::ChargePointStatus::Charging,
         OcppChargerStatus::Reserved => v106::ChargePointStatus::Reserved,
         OcppChargerStatus::Unavailable => v106::ChargePointStatus::Unavailable,
@@ -512,9 +534,9 @@ fn status_notification_rqt(
     ctx: &mut StatusNotificationRqtCtx,
 ) -> Result<(), AfbError> {
     // move from binding to ocpp status
-    let status= args.get::<&OcppChargerStatus>(0)?;
+    let status = args.get::<&OcppChargerStatus>(0)?;
     ctx.mgr.set_status(&status)?;
-    let query= update_charger_status(ctx.mgr, &status)?;
+    let query = update_charger_status(ctx.mgr, &status)?;
 
     afb_log_msg!(Debug, rqt, "Status Notification update{:?}", &query);
     AfbSubCall::call_async(
@@ -580,6 +602,11 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
         .set_usage("true|false")
         .finalize()?;
 
+    let monitor_handler = AfbEvtHandler::new("monitor-evt")
+        .set_pattern("monitor/disconnected")
+        .set_callback(Box::new(MonitorEvtCtx {mgr: config.mgr }))
+        .finalize()?;
+
     // register veb within API
     api.add_verb(authorize_verb);
     api.add_verb(transaction_verb);
@@ -587,6 +614,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
     api.add_verb(engy_state_verb);
     api.add_verb(heartbeat_verb);
     api.add_verb(subscribe_verb);
+    api.add_evt_handler(monitor_handler);
 
     Ok(())
 }
