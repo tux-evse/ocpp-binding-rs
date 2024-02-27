@@ -117,7 +117,7 @@ pub fn binding_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static AfbApi
         frontend.set_verbosity(value);
     };
 
-    let monitoring_handler = AfbEvtHandler::new("monitoring-evt")
+    let monitoring_handler = AfbEvtHandler::new("monitor-evt")
         .set_pattern("monitor/disconnected")
         .set_callback(Box::new(MonitoringEvtCtrl {}))
         .finalize()?;

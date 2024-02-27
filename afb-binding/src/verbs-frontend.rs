@@ -253,6 +253,22 @@ fn engy_state_request(
         v106::MeterValues::Request(query),
         Box::new(MeterValuesRsp {}),
     )?;
+
+    AfbSubCall::call_sync(
+        rqt,
+        "OCPP-SND",
+        "StatusNotification",
+        v106::StatusNotification::Request(v106::StatusNotificationRequest {
+            connector_id: 1,
+            status: v106::ChargePointStatus::Charging,
+            error_code: v106::ChargePointErrorCode::NoError,
+            info: Some("Tux-Evse refresh report".to_string()),
+            timestamp: Some(get_utc()),
+            vendor_id: None,
+            vendor_error_code: None,
+        }),
+    )?;
+
     Ok(())
 }
 
