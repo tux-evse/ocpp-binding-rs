@@ -198,7 +198,7 @@ fn engy_event_action(
     };
 
     let session_value = v106::SampledValue {
-        value: (state.session / 100).to_string(),
+        value: (state.session * 10).to_string(),
         location: None, // string
         context: None,  // string
         phase: None,    // default L1
