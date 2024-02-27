@@ -83,7 +83,7 @@ pub fn ocpp_bootstrap(
         "StatusNotification",
         v106::StatusNotification::Request(v106::StatusNotificationRequest {
             connector_id: 1,
-            status: v106::ChargePointStatus::Preparing,
+            status: v106::ChargePointStatus::Available,
             error_code: v106::ChargePointErrorCode::NoError,
             info: Some("Tux-Evse booting report".to_string()),
             timestamp: Some(get_utc()),

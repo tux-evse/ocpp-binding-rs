@@ -4,7 +4,7 @@
 ## Provides
 
 * Rust implementation of OCPP charger stack
-* afb-binding micro service architecture and security model [api-v4](https://github.com/redpesk-common/afb-librust/blob/master/docs/1-architecture_presentation.md)
+* afb-binding micro service architecture and security model [api-v4](https://github.com/redpesk-common/afb-librust/blob/master/docs/1-architecture_presentation.md)-
 
 ## References
 
