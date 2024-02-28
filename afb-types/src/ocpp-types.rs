@@ -24,6 +24,7 @@ pub enum OcppMsg {
     Transaction(bool,u32),
     Reservation(ReservationSession),
     PowerLimit(PowerLimit),
+    remote_stop_transaction(bool),
     Unknown,
 }
 
@@ -76,6 +77,7 @@ pub struct OcppState {
     pub reservation: Option<ReservationSession>,
     pub authorized: bool,
     pub status: OcppChargerStatus,
+    pub remote_stop_transaction: bool,
 }
 
 impl OcppState {
@@ -86,6 +88,7 @@ impl OcppState {
             reservation: None,
             authorized: false,
             status: OcppChargerStatus::Preparing,
+            remote_stop_transaction: true, //true because chmgr api is opposite - remotepower
         }
     }
 }

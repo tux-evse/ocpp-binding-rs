@@ -50,34 +50,40 @@ impl AfbApiControls for TapUserData {
                 .add_arg(OcppChargerStatus::Charging)?
                 .finalize()?;
 
-        let mut engy_state = EnergyState {
-            // ocpp unused data
-            subscription_max: 0,
-            imax: 0,
-            pmax: 0,
-            umax: 0,
-            volts:0,
-            // public data unit= real-value*100
-            session: 1000,
-            total: 1000,
-            current: 2000,
-            tension: 24000,
-            power: 1000,
-            timestamp: Duration::new(0, 0),
-        };
-        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "push-measure")
+        let send_measure_1 = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
             .set_info("send mock measure to backend")
-            .set_delay(5000) // wait 5s before pushing this test
-            .add_arg(engy_state.clone())? // provide a nonce
+            .set_delay(30000) // wait 5s before pushing this test
+            .add_arg(EnergyState {
+                subscription_max: 0,
+                imax: 0,
+                pmax: 0,
+                tension_max: 0,
+                session: 100,
+                total: 100,
+                current: 100,
+                tension: 24000,
+                power: 100,
+                timestamp: Duration::new(0, 0),
+            })? // provide a nonce
             .finalize()?;
 
-        engy_state.current = engy_state.current+10;
-        engy_state.total = engy_state.total+10;
-        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "push-measure")
+        let send_measure_2 = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
             .set_info("send mock measure to backend")
-            .set_delay(5000) // wait 5s before pushing this test
-            .add_arg(engy_state.clone())? // provide a nonce
+            .set_delay(30000) // wait 5s before pushing this test
+            .add_arg(EnergyState {
+                subscription_max: 0,
+                imax: 0,
+                pmax: 0,
+                tension_max: 0,
+                session: 2222,
+                total: 2222,
+                current: 2222,
+                tension: 24000,
+                power: 2222,
+                timestamp: Duration::new(0, 0),
+            })? // provide a nonce
             .finalize()?;
+
 
         let finishing_charge = AfbTapTest::new(
             "notify-charge-finishing",
