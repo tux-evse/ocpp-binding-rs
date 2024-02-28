@@ -190,7 +190,7 @@ fn engy_event_action(
     }
 
     let tension_value = v106::SampledValue {
-        value: (state.tension / 100).to_string(),
+        value: (state.tension / 1000).to_string(),
         location: None, // string
         context: None,  // string
         phase: None,    // default L1
@@ -200,7 +200,7 @@ fn engy_event_action(
     };
 
     let current_value = v106::SampledValue {
-        value: (state.current / 100).to_string(),
+        value: (state.current / 1000).to_string(),
         location: None, // string
         context: None,  // string
         phase: None,    // default L1
@@ -210,7 +210,7 @@ fn engy_event_action(
     };
 
     let power_value = v106::SampledValue {
-        value: (state.power / 100).to_string(),
+        value: (state.power / 1000).to_string(),
         location: None, // string
         context: None,  // string
         phase: None,    // default L1
@@ -220,7 +220,7 @@ fn engy_event_action(
     };
 
     let session_value = v106::SampledValue {
-        value: (state.session * 10).to_string(),
+        value: (state.session).to_string(),
         location: None, // string
         context: None,  // string
         phase: None,    // default L1
@@ -264,7 +264,6 @@ fn engy_state_request(
     ctx: &mut EngyStateRqtCtx,
 ) -> Result<(), AfbError> {
     let state = args.get::<&EnergyState>(0)?;
-
     let query = engy_event_action(state, ctx.mgr)?;
     afb_log_msg!(Debug, rqt, "MeterValues request: {:?}", query);
 
