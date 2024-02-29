@@ -447,8 +447,8 @@ fn transac_stop_rsp(
         _ => return afb_error!("ocpp-transaction-stop", "invalid response type"),
     };
 
-    afb_log_msg!(Debug, rqt, "Transaction Stop accepted");
     ctx.mgr.logout()?;
+    afb_log_msg!(Debug, rqt, "Transaction Stop accepted");
     rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -496,7 +496,6 @@ fn transaction_request(
                 transaction_id: tid,
             };
             afb_log_msg!(Debug, rqt, "Transaction Stop request {:?}", &query);
-
             AfbSubCall::call_async(
                 rqt,
                 "OCPP-SND",
@@ -506,6 +505,7 @@ fn transaction_request(
             )?;
         }
     }
+    // reply done from async response
     Ok(())
 }
 

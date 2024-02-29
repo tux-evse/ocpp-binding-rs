@@ -62,14 +62,14 @@ impl AfbApiControls for TapUserData {
             timestamp: Duration::new(0, 0),
         };
 
-        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "engy-state")
+        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "push-measure")
             .set_info("send mock measure to backend")
             .set_delay(30000) // wait 5s before pushing this test
             .add_arg(energy_state.clone())? // provide a nonce
             .finalize()?;
 
         energy_state.session=  energy_state.session+1000;
-        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "engy-state")
+        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "push-measure")
             .set_info("send mock measure to backend")
             .set_delay(30000) // wait 5s before pushing this test
             .add_arg(energy_state.clone())? // provide a nonce
