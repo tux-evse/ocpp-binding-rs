@@ -305,22 +305,12 @@ fn remote_stop_transaction_cb(
 ) -> Result<(), AfbError> {
     let data = args.get::<&v106::RemoteStopTransaction>(0)?;
     match data {
-        v106::RemoteStopTransaction::Request(RemoteStopTransaction) => {
-            afb_log_msg!(Debug, rqt, "Backend Remote Stop Transaction req {:?}", RemoteStopTransaction);
-    //        let TransactionID = match reset.kind {
-    //            v106::ResetRequestStatus::Hard => {
-    //                // should reboot hardware
-    //                afb_log_msg!(Warning, rqt, "Hard reset (hardware reboot) ignored");
-    //                v106::RemoteStopTransactionResponseStatus::Rejected
-    //            }
-    //            v106::ResetRequestStatus::Soft => {
-                    ctx.mgr.remote_stop_transaction(true)?;
-    //                v106::RemoteStopTransactionResponseStatus::Accepted
-    //            }
-            
-        
-    //        let response = v106::RemoteStopTransactionResponse { status };
-    //        rqt.reply(v106::RemoteStopTransaction::Response(response), 0);
+        v106::RemoteStopTransaction::Request(value) => {
+            afb_log_msg!(Debug, rqt, "Backend Remote Stop Transaction req {:?}", value);
+            //let status = ctx.mgr.remote_stop_transaction(false)?;
+            //let response = v106::RemoteStopTransactionResponse { status };
+            //rqt.reply(v106::RemoteStopTransaction::Response(response), 0);
+            ctx.mgr.remote_stop_transaction(false)?;
         }
         _ => {
             afb_log_msg!(Warning, rqt, "Unsupported remote stop request request");
