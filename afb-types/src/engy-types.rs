@@ -72,7 +72,7 @@ impl MeterDataSet {
 
     // update data_set and set updated flag when total changes.
     pub fn update(&mut self, phase: usize, meter: f64) -> Result<(), AfbError> {
-        let value = (meter * 100.0).round() as i32;
+        let value = (meter * 1000.0).round() as i32;
         let variation = value*self.variation/100;
         match phase {
             0 => {
@@ -131,7 +131,6 @@ pub struct EnergyState {
     pub imax: i32,
     #[serde(skip)]
     pub pmax: i32,
-    pub volts: i32,
     // public data
     pub timestamp: Duration,
     pub session: i32,
@@ -143,12 +142,11 @@ pub struct EnergyState {
 impl EnergyState {
     pub fn default(imax: i32, pmax: i32,umax: i32) -> Self {
         EnergyState {
-            subscription_max: 0,
-            imax: imax*100,
-            pmax: pmax*100,
-            umax: umax*100,
+            subscription_max: pmax,
+            imax: imax,
+            pmax: pmax,
+            umax: umax,
             session: 0,
-            volts: 0,
             current: 0,
             tension: 0,
             power: 0,

@@ -161,17 +161,17 @@ impl ManagerHandle {
         };
         Ok(response)
     }
-    
-    
+
+
     //Draft RMU: send remote stop request from OCPP to ChargingMgr
     // ?? RemoteStopTransaction ou remoteStopTransaction
     pub fn remote_stop_transaction(&self, remote_stop_transaction: bool) -> Result<(), AfbError> {
         let mut data_set = self.get_state()?;
-	    self.event.push(OcppMsg::remote_stop_transaction(remote_stop_transaction));
+	    self.event.push(OcppMsg::RemoteStopTransaction(remote_stop_transaction));
         data_set.remote_stop_transaction = remote_stop_transaction;
         Ok(())
     }
-    
+
     //pub fn authorized(&self, authorized: bool) -> Result<(), AfbError> {
     //    let mut data_set = self.get_state()?;
     //    self.event.push(OcppMsg::Authorized(authorized));

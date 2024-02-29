@@ -50,40 +50,30 @@ impl AfbApiControls for TapUserData {
                 .add_arg(OcppChargerStatus::Charging)?
                 .finalize()?;
 
-        let send_measure_1 = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
+        let mut energy_state = EnergyState {
+            subscription_max: 0,
+            imax: 0,
+            pmax: 0,
+            umax: 0,
+            session: 5000,
+            current: 10000,
+            tension: 240000,
+            power: 100,
+            timestamp: Duration::new(0, 0),
+        };
+
+        let send_measure_1 = AfbTapTest::new("engy-mock-state-1", self.target, "engy-state")
             .set_info("send mock measure to backend")
             .set_delay(30000) // wait 5s before pushing this test
-            .add_arg(EnergyState {
-                subscription_max: 0,
-                imax: 0,
-                pmax: 0,
-                tension_max: 0,
-                session: 100,
-                total: 100,
-                current: 100,
-                tension: 24000,
-                power: 100,
-                timestamp: Duration::new(0, 0),
-            })? // provide a nonce
+            .add_arg(energy_state.clone())? // provide a nonce
             .finalize()?;
 
-        let send_measure_2 = AfbTapTest::new("engy-mock-state", self.target, "engy-state")
+        energy_state.session=  energy_state.session+1000;
+        let send_measure_2 = AfbTapTest::new("engy-mock-state-2", self.target, "engy-state")
             .set_info("send mock measure to backend")
             .set_delay(30000) // wait 5s before pushing this test
-            .add_arg(EnergyState {
-                subscription_max: 0,
-                imax: 0,
-                pmax: 0,
-                tension_max: 0,
-                session: 2222,
-                total: 2222,
-                current: 2222,
-                tension: 24000,
-                power: 2222,
-                timestamp: Duration::new(0, 0),
-            })? // provide a nonce
+            .add_arg(energy_state.clone())? // provide a nonce
             .finalize()?;
-
 
         let finishing_charge = AfbTapTest::new(
             "notify-charge-finishing",
@@ -99,13 +89,14 @@ impl AfbApiControls for TapUserData {
         let stop_transaction = AfbTapTest::new("transaction-stop", self.target, "transaction")
             .set_info("send stop transaction")
             .set_delay(10000) // wait 10s before pushing this test
-            .add_arg(OcppTransaction::Stop(engy_state.total))?
+            .add_arg(OcppTransaction::Stop(energy_state.session))?
             .finalize()?;
 
-        let stopped_charge = AfbTapTest::new("set_status-available", self.target, "status-notification")
-            .set_info("send available notification")
-            .add_arg(OcppChargerStatus::Available)?
-            .finalize()?;
+        let stopped_charge =
+            AfbTapTest::new("set_status-available", self.target, "status-notification")
+                .set_info("send available notification")
+                .add_arg(OcppChargerStatus::Available)?
+                .finalize()?;
 
         // wait before closing the connection (time to check backend->charger request)
         let heartbeat_stop = AfbTapTest::new("heartbeat-stop", self.target, "heartbeat")
@@ -131,37 +122,6 @@ impl AfbApiControls for TapUserData {
             .set_autoexit(self.autoexit)
             .set_output(self.output)
             .finalize()?;
-        Ok(())
-    }
-
-    fn config(&mut self, api: &AfbApi, jconf: JsoncObj) -> Result<(), AfbError> {
-        afb_log_msg!(Debug, api, "api={} config={}", api.get_uid(), jconf);
-        match jconf.get::<bool>("autostart") {
-            Ok(value) => self.autostart = value,
-            Err(_error) => {}
-        };
-
-        match jconf.get::<bool>("autoexit") {
-            Ok(value) => self.autoexit = value,
-            Err(_error) => {}
-        };
-
-        match jconf.get::<String>("output") {
-            Err(_error) => {}
-            Ok(value) => match value.to_uppercase().as_str() {
-                "JSON" => self.output = AfbTapOutput::JSON,
-                "TAP" => self.output = AfbTapOutput::TAP,
-                "NONE" => self.output = AfbTapOutput::NONE,
-                _ => {
-                    afb_log_msg!(
-                        Error,
-                        api,
-                        "Invalid output should be json|tap (default used)"
-                    );
-                }
-            },
-        };
-
         Ok(())
     }
 
@@ -195,13 +155,8 @@ fn subscribe_state_cb(
     args: &AfbData,
     ctx: &mut SubscribeStateCtx,
 ) -> Result<(), AfbError> {
-    let args= args.get::<&EnergyAction>(0)?;
-    afb_log_msg!(
-        Notice,
-        rqt,
-        "Mock engy subscribe state args:{:?}",
-        args
-    );
+    let args = args.get::<&EnergyAction>(0)?;
+    afb_log_msg!(Notice, rqt, "Mock engy subscribe state args:{:?}", args);
 
     match args {
         EnergyAction::SUBSCRIBE => {
@@ -238,9 +193,7 @@ fn engy_state_request(
         imax: 0,
         pmax: 0,
         umax: 0,
-        volts:0,
         session: ctx.total,
-        total: ctx.total,
         current: power / 240,
         tension: 240,
         power: power,
@@ -301,7 +254,7 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
     afb_log_msg!(Notice, rootv4, "ocpp test uid:{} target:{}", uid, target);
     let api = AfbApi::new(uid)
         .set_info("Testing OCPP tap reporting")
-        .require_api(target)
+        //.require_api(target) introduce a loop in dependency
         .set_callback(Box::new(tap_config))
         .add_verb(push_verb)
         .add_verb(state_verb)
