@@ -314,7 +314,7 @@ fn remote_stop_transaction_cb(
     //                v106::RemoteStopTransactionResponseStatus::Rejected
     //            }
     //            v106::ResetRequestStatus::Soft => {
-    //                ctx.mgr.RemoteStopTransaction()?;
+                    ctx.mgr.remote_stop_transaction(true)?;
     //                v106::RemoteStopTransactionResponseStatus::Accepted
     //            }
             
