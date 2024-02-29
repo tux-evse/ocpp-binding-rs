@@ -148,8 +148,8 @@ AfbVerbRegister!(ResetVerb, reset_cb, ResetVerbCtx);
 
 
 fn reset_cb(
-        rqt: &AfbRequest, 
-        args: &AfbData, 
+        rqt: &AfbRequest,
+        args: &AfbData,
         ctx: &mut ResetVerb
 ) -> Result<(), AfbError> {
     let data = args.get::<&v106::Reset>(0)?;
@@ -299,8 +299,8 @@ AfbVerbRegister!(RemoteStopTransaction, remote_stop_transaction_cb, RemoteStopTr
 
 
 fn remote_stop_transaction_cb(
-        rqt: &AfbRequest, 
-        args: &AfbData, 
+        rqt: &AfbRequest,
+        args: &AfbData,
         ctx: &mut RemoteStopTransactionCtx
 ) -> Result<(), AfbError> {
     let data = args.get::<&v106::RemoteStopTransaction>(0)?;
@@ -340,7 +340,7 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
         .set_info("backend request frontend reset")
         .finalize()?;
 
-    let remoteStopTransaction = AfbVerb::new("RemoteStopTransaction")
+    let remote_stop_transaction = AfbVerb::new("RemoteStopTransaction")
         .set_callback(Box::new(RemoteStopTransactionCtx { mgr: config.mgr }))
 	.set_info("backend request to stop transaction")
         .finalize()?;
@@ -354,7 +354,7 @@ pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Resu
     api.add_verb(reserve_now);
     api.add_verb(setprofile);
     api.add_verb(reset);
-    api.add_verb(remoteStopTransaction);
+    api.add_verb(remote_stop_transaction);
 
     Ok(())
 }
