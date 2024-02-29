@@ -20,18 +20,23 @@ fn ignore_timer_rsp(_api: &AfbApi, _args: &AfbData) -> Result<(), AfbError> {
     Ok(())
 }
 
-struct MonitorEvtCtx{
+struct MonitorEvtCtx {
     mgr: &'static ManagerHandle,
 }
-AfbEventRegister!(MonitorEvtCtrl, monitor_event_cb,MonitorEvtCtx );
-fn monitor_event_cb(evt: &AfbEventMsg, args: &AfbData, ctx: &mut MonitorEvtCtx) -> Result<(), AfbError> {
+AfbEventRegister!(MonitorEvtCtrl, monitor_event_cb, MonitorEvtCtx);
+fn monitor_event_cb(
+    evt: &AfbEventMsg,
+    args: &AfbData,
+    ctx: &mut MonitorEvtCtx,
+) -> Result<(), AfbError> {
     let status = ctx.mgr.get_status()?;
     let msg = args.get::<String>(0)?;
     afb_log_msg!(
         Warning,
         evt,
         "monitor_evt ocpp server websocket reset evt:{:?} status:{:?}",
-        msg, &status
+        msg,
+        &status
     );
 
     let query = update_charger_status(ctx.mgr, &status)?;
@@ -53,7 +58,6 @@ struct TimerCtx {
 // ping server every tic-ms to keep ocpp connection live (Warning: not supported by biapower backend)
 AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
 fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), AfbError> {
-
     // keep updating 'available' charger status for OCPP not to forget about us
     let status = ctx.mgr.get_status()?;
     match status {
@@ -506,7 +510,6 @@ fn transaction_request(
 }
 
 // StatusNotification async start response callback
-
 AfbVerbRegister!(StatusNotificationRsp, status_notification_rsp);
 fn status_notification_rsp(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
     let data = args.get::<&v106::StatusNotification>(0)?;
@@ -603,7 +606,7 @@ pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Res
 
     let monitor_handler = AfbEvtHandler::new("monitor-evt")
         .set_pattern("monitor/disconnected")
-        .set_callback(Box::new(MonitorEvtCtx {mgr: config.mgr }))
+        .set_callback(Box::new(MonitorEvtCtx { mgr: config.mgr }))
         .finalize()?;
 
     // register veb within API
