@@ -31,6 +31,7 @@ pub struct AuthState {
     pub tagid:String,
     pub imax:u32,
     pub pmax: u32,
+    pub ocpp_check: bool,
 }
 
 impl AuthState {
@@ -40,6 +41,7 @@ impl AuthState {
             imax: 0,
             pmax: 0,
             tagid: String::new(),
+            ocpp_check: true,
         }
     }
 }
