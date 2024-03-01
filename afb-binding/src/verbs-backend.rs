@@ -292,7 +292,7 @@ fn set_charging_profile_cb(
 
 // 6.33. RemoteStopTransaction.req   RMU
 struct RemoteStopTransactionCtx {
-    mgr: &'static ocpp::manager::ManagerHandle,
+    mgr: &'static ManagerHandle,
 }
 AfbVerbRegister!(RemoteStopTransaction, remote_stop_transaction_cb, RemoteStopTransactionCtx);
 
