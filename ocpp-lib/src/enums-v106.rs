@@ -85,6 +85,7 @@ pub type UnitOfMeasure= types::UnitOfMeasure;
 pub type Measurand= types::Measurand;
 pub type ChargingProfileStatus= types::ChargingProfileStatus;
 pub type Reason= types::Reason;
+pub type RemoteStartStopStatus= types::RemoteStartStopStatus;
 
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Display)]

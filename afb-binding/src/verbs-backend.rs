@@ -307,22 +307,18 @@ fn remote_stop_transaction_cb(
     match data {
         v106::RemoteStopTransaction::Request(value) => {
             afb_log_msg!(Debug, rqt, "Backend Remote Stop Transaction req {:?}", value);
-            //let status = ctx.mgr.remote_stop_transaction(false)?;
-            //let response = v106::RemoteStopTransactionResponse { status };
-            //rqt.reply(v106::RemoteStopTransaction::Response(response), 0);
-            ctx.mgr.remote_stop_transaction(false)?;
+            ctx.mgr.remote_stop_transaction(value.transaction_id)?;
+            let response= v106::RemoteStartStopStatus::Accepted;
+            rqt.reply(v106::RemoteStopTransaction::Response(v106::RemoteStopTransactionResponse {status: response}), 0);
         }
         _ => {
             afb_log_msg!(Warning, rqt, "Unsupported remote stop request request");
-            rqt.reply(AFB_NO_DATA, -1);
+            let response= v106::RemoteStartStopStatus::Rejected;
+            rqt.reply(v106::RemoteStopTransaction::Response(v106::RemoteStopTransactionResponse {status: response}), 0);
         }
     }
     Ok(())
 }
-
-
-
-
 
 pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
     let cancel_resa = AfbVerb::new("CancelReservation")

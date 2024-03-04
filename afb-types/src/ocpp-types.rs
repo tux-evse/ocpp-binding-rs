@@ -24,7 +24,6 @@ pub enum OcppMsg {
     Transaction(bool,u32),
     Reservation(ReservationSession),
     PowerLimit(PowerLimit),
-    RemoteStopTransaction(bool),
     Unknown,
 }
 

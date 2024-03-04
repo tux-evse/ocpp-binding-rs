@@ -165,10 +165,15 @@ impl ManagerHandle {
 
     //Draft RMU: send remote stop request from OCPP to ChargingMgr
     // ?? RemoteStopTransaction ou remoteStopTransaction
-    pub fn remote_stop_transaction(&self, remote_stop_transaction: bool) -> Result<(), AfbError> {
+    pub fn remote_stop_transaction(&self, remote_stop_transaction_id: i32) -> Result<(), AfbError> {
         let mut data_set = self.get_state()?;
-	    self.event.push(OcppMsg::RemoteStopTransaction(remote_stop_transaction));
-        data_set.remote_stop_transaction = remote_stop_transaction;
+
+        if data_set.tid != remote_stop_transaction_id {
+            return afb_error! ("ocpp-remote-stop-mgr", "invalid transaction id expect:{} get:{}", data_set.tid, remote_stop_transaction_id)
+        }
+
+	    self.event.push(OcppMsg::Transaction(false, remote_stop_transaction_id as u32));
+        data_set.tid=0;
         Ok(())
     }
 

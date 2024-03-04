@@ -212,7 +212,7 @@ pub fn binding_test_init(rootv4: AfbApiV4, jconf: JsoncObj) -> Result<&'static A
 
     let tap_config = TapUserData {
         autostart: jconf.default::<bool>("autostart", true)?,
-        autoexit: jconf.default::<bool>("autoexit", true)?,
+        autoexit: jconf.default::<bool>("autoexit", false)?,
         output: AfbTapOutput::TAP,
         target,
     };
