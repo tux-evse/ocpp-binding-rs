@@ -17,8 +17,8 @@ use std::time::Duration;
 use typesv4::prelude::*;
 
 // Generic callback when ocpp response should be ignored
-AfbVerbRegister!(IgnoreOcppBackendRsp, ignore_backend_rsp);
-fn ignore_backend_rsp(rqt: &AfbRequest, _args: &AfbData) -> Result<(), AfbError> {
+// AfbVerbRegister!(IgnoreOcppBackendRsp, ignore_backend_rsp);
+fn ignore_backend_rsp(rqt: &AfbRequest, _args: &AfbRqtData) -> Result<(), AfbError> {
     rqt.reply(AFB_NO_DATA, 0);
     Ok(())
 }
@@ -27,12 +27,14 @@ struct HeartbeatCtxData {
     count: u32,
 }
 
-AfbVerbRegister!(HeartbeatVerb, heartbeat_cb, HeartbeatCtxData);
+// AfbVerbRegister!(HeartbeatVerb, heartbeat_cb, HeartbeatCtxData);
 fn heartbeat_cb(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut HeartbeatCtxData,
+    args: &AfbRqtData,
+    ctx: &mut AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_mut::<HeartbeatCtxData>()?;
+    
     let data = args.get::<&v106::Heartbeat>(0)?;
     match data {
         v106::Heartbeat::Request(_data) => {
@@ -54,16 +56,13 @@ fn heartbeat_cb(
 struct CancelReservationCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(
-    CancelReservationVerb,
-    cancel_notification_cb,
-    CancelReservationCtx
-);
+// AfbVerbRegister!(CancelReservationVerb, cancel_notification_cb, CancelReservationCtx);
 fn cancel_notification_cb(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut CancelReservationCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<CancelReservationCtx>()?;
     let data = args.get::<&v106::CancelReservation>(0)?;
     match data {
         v106::CancelReservation::Request(value) => {
@@ -84,12 +83,13 @@ fn cancel_notification_cb(
 struct ReserveNowCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(ReserveNowVerb, reverve_now_cb, ReserveNowCtx);
-fn reverve_now_cb(
+// AfbVerbRegister!(ReserveNowVerb, reserve_now_cb, ReserveNowCtx);
+fn reserve_now_cb(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut ReserveNowCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<ReserveNowCtx>()?;
     let data = args.get::<&v106::ReserveNow>(0)?;
     match data {
         v106::ReserveNow::Request(value) => {
@@ -115,8 +115,8 @@ fn reverve_now_cb(
     Ok(())
 }
 
-AfbVerbRegister!(ChangeAvailabilityVerb, change_availability_cb);
-fn change_availability_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+// AfbVerbRegister!(ChangeAvailabilityVerb, change_availability_cb);
+fn change_availability_cb(rqt: &AfbRequest, args: &AfbRqtData) -> Result<(), AfbError> {
     let data = args.get::<&v106::ChangeAvailability>(0)?;
     match data {
         v106::ChangeAvailability::Request(value) => {
@@ -144,14 +144,15 @@ fn change_availability_cb(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbErr
 struct ResetVerbCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(ResetVerb, reset_cb, ResetVerbCtx);
+// AfbVerbRegister!(ResetVerb, reset_cb, ResetVerbCtx);
 
 
 fn reset_cb(
         rqt: &AfbRequest,
-        args: &AfbData,
-        ctx: &mut ResetVerb
+        args: &AfbRqtData,
+        ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<ResetVerbCtx>()?;
     let data = args.get::<&v106::Reset>(0)?;
     match data {
         v106::Reset::Request(reset) => {
@@ -184,16 +185,13 @@ struct SetChargingProfileCtx {
 }
 // 6.43. SetChargingProfile.req
 // https://www.ampcontrol.io/ocpp-guide/how-to-use-smart-charging-with-ocpp
-AfbVerbRegister!(
-    SetChargingProfileVerb,
-    set_charging_profile_cb,
-    SetChargingProfileCtx
-);
+// AfbVerbRegister!(SetChargingProfileVerb, set_charging_profile_cb, SetChargingProfileCtx);
 fn set_charging_profile_cb(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut SetChargingProfileCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<SetChargingProfileCtx>()?;
     let data = args.get::<&v106::SetChargingProfile>(0)?;
     match data {
         v106::SetChargingProfile::Request(value) => {
@@ -294,15 +292,16 @@ fn set_charging_profile_cb(
 struct RemoteStopTransactionCtx {
     mgr: &'static ocpp::manager::ManagerHandle,
 }
-AfbVerbRegister!(RemoteStopTransaction, remote_stop_transaction_cb, RemoteStopTransactionCtx);
+// AfbVerbRegister!(RemoteStopTransaction, remote_stop_transaction_cb, RemoteStopTransactionCtx);
 
 
 
 fn remote_stop_transaction_cb(
         rqt: &AfbRequest,
-        args: &AfbData,
-        ctx: &mut RemoteStopTransactionCtx
+        args: &AfbRqtData,
+        ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<RemoteStopTransactionCtx>()?;
     let data = args.get::<&v106::RemoteStopTransaction>(0)?;
     match data {
         v106::RemoteStopTransaction::Request(value) => {
@@ -322,27 +321,32 @@ fn remote_stop_transaction_cb(
 
 pub(crate) fn register_backend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
     let cancel_resa = AfbVerb::new("CancelReservation")
-        .set_callback(Box::new(CancelReservationVerb { mgr: config.mgr }))
+        .set_callback(cancel_notification_cb)
+        .set_context(CancelReservationCtx { mgr: config.mgr })
         .set_info("backend cancel reservation")
         .finalize()?;
 
     let reserve_now = AfbVerb::new("ReserveNow")
-        .set_callback(Box::new(ReserveNowCtx { mgr: config.mgr }))
+        .set_callback(reserve_now_cb)
+        .set_context(ReserveNowCtx { mgr: config.mgr })
         .set_info("backend frontend reservation")
         .finalize()?;
 
     let reset = AfbVerb::new("Reset")
-        .set_callback(Box::new(ResetVerbCtx { mgr: config.mgr }))
+        .set_callback(reset_cb)
+        .set_context(ResetVerbCtx { mgr: config.mgr })
         .set_info("backend request frontend reset")
         .finalize()?;
 
     let remote_stop_transaction = AfbVerb::new("RemoteStopTransaction")
-        .set_callback(Box::new(RemoteStopTransactionCtx { mgr: config.mgr }))
-	.set_info("backend request to stop transaction")
+        .set_callback(remote_stop_transaction_cb)
+        .set_context(RemoteStopTransactionCtx { mgr: config.mgr })
+	    .set_info("backend request to stop transaction")
         .finalize()?;
 
     let setprofile = AfbVerb::new("SetChargingProfile")
-        .set_callback(Box::new(SetChargingProfileCtx { mgr: config.mgr }))
+        .set_callback(set_charging_profile_cb)
+        .set_context(SetChargingProfileCtx { mgr: config.mgr })
         .set_info("backend request SetChargingProfile")
         .finalize()?;
 

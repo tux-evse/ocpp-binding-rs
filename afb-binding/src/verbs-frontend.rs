@@ -15,20 +15,25 @@ use afbv4::prelude::*;
 use ocpp::prelude::*;
 use typesv4::prelude::*;
 
-AfbCallRegister!(IgnoreResponseCtrl, ignore_timer_rsp);
-fn ignore_timer_rsp(_api: &AfbApi, _args: &AfbData) -> Result<(), AfbError> {
+struct IgnoreResponseCtx { // redundant
+}
+// AfbCallRegister!(IgnoreResponseCtrl, ignore_timer_rsp);
+fn ignore_timer_rsp(_api: &AfbApi, _args: &AfbRqtData, _ctx: &AfbCtxData) -> Result<(), AfbError> {
+    // let _ctx = ctx.get_ref::<IgnoreResponseCtx>()?; // redundant
     Ok(())
 }
+
 
 struct MonitorEvtCtx {
     mgr: &'static ManagerHandle,
 }
-AfbEventRegister!(MonitorEvtCtrl, monitor_event_cb, MonitorEvtCtx);
+// AfbEventRegister!(MonitorEvtCtrl, monitor_event_cb, MonitorEvtCtx);
 fn monitor_event_cb(
     evt: &AfbEventMsg,
-    args: &AfbData,
-    ctx: &mut MonitorEvtCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<MonitorEvtCtx>()?;
     let status = ctx.mgr.get_status()?;
     let msg = args.get::<String>(0)?;
     afb_log_msg!(
@@ -45,7 +50,8 @@ fn monitor_event_cb(
         "OCPP-SND",
         "StatusNotification",
         v106::StatusNotification::Request(query),
-        Box::new(IgnoreResponseCtrl {}),
+        ignore_timer_rsp,
+        IgnoreResponseCtx {},
     )?;
 
     Ok(())
@@ -56,9 +62,10 @@ struct TimerCtx {
     mgr: &'static ManagerHandle,
 }
 // ping server every tic-ms to keep ocpp connection live (Warning: not supported by biapower backend)
-AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
-fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), AfbError> {
+// AfbTimerRegister!(TimerCtrl, timer_cb, TimerCtx);
+fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &AfbCtxData) -> Result<(), AfbError> {
     // keep updating 'available' charger status for OCPP not to forget about us
+    let ctx = ctx.get_ref::<TimerCtx>()?;
     let status = ctx.mgr.get_status()?;
     match status {
         OcppChargerStatus::Available => {}
@@ -71,7 +78,8 @@ fn timer_cb(_timer: &AfbTimer, _decount: u32, ctx: &mut TimerCtx) -> Result<(), 
         "OCPP-SND",
         "StatusNotification",
         v106::StatusNotification::Request(query),
-        Box::new(IgnoreResponseCtrl {}),
+        ignore_timer_rsp,
+        IgnoreResponseCtx {},
     )?;
     Ok(())
 }
@@ -126,10 +134,11 @@ pub fn ocpp_bootstrap(
         AfbTimer::new("tic-timer")
             .set_period(tic)
             .set_decount(0)
-            .set_callback(Box::new(TimerCtx {
+            .set_callback(timer_cb)
+            .set_context(TimerCtx {
                 apiv4: api.get_apiv4(),
                 mgr,
-            }))
+            })
             .start()?;
     }
     Ok(())
@@ -244,9 +253,11 @@ fn engy_event_action(
     Ok(query)
 }
 
+struct MeterValuesRspCtx { // redundant
+}
 // async callback for pushing measures
-AfbVerbRegister!(MeterValuesRsp, meter_values_response);
-fn meter_values_response(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+// AfbVerbRegister!(MeterValuesRsp, meter_values_response);
+fn meter_values_response(rqt: &AfbRequest, args: &AfbRqtData, _ctx: &AfbCtxData) -> Result<(), AfbError> {
     let data = args.get::<&v106::MeterValues>(0)?;
     match data {
         v106::MeterValues::Response(response) => response,
@@ -261,12 +272,13 @@ struct EngyStateRqtCtx {
     mgr: &'static ManagerHandle,
 }
 // this verb is only for testing purpose real measure should be send from engy event
-AfbVerbRegister!(EngyStateRqt, engy_state_request, EngyStateRqtCtx);
+// AfbVerbRegister!(EngyStateRqt, engy_state_request, EngyStateRqtCtx);
 fn engy_state_request(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut EngyStateRqtCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<EngyStateRqtCtx>()?;
     let state = args.get::<&EnergyState>(0)?;
     let query = engy_event_action(state, ctx.mgr)?;
     afb_log_msg!(Debug, rqt, "MeterValues request: {:?}", query);
@@ -276,7 +288,8 @@ fn engy_state_request(
         "OCPP-SND",
         "MeterValues",
         v106::MeterValues::Request(query),
-        Box::new(MeterValuesRsp {}),
+        meter_values_response,
+        MeterValuesRspCtx {},
     )?;
 
     AfbSubCall::call_sync(
@@ -300,12 +313,13 @@ fn engy_state_request(
 struct HeartbeatRspCtx {
     nonce: u32,
 }
-AfbVerbRegister!(HeartbeatRsp, heartbeat_response, HeartbeatRspCtx);
+// AfbVerbRegister!(HeartbeatRsp, heartbeat_response, HeartbeatRspCtx);
 fn heartbeat_response(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut HeartbeatRspCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<HeartbeatRspCtx>()?;
     let data = args.get::<&v106::Heartbeat>(0)?;
     let response = match data {
         v106::Heartbeat::Response(response) => response,
@@ -322,10 +336,12 @@ fn heartbeat_response(
     rqt.reply(ctx.nonce, 0);
     Ok(())
 }
-
+struct HeartbeatRqtCtx { // redundant
+    nonce: u32,
+}
 // Authentication check id_tag on backend
-AfbVerbRegister!(HeartbeatRqt, heartbeat_request);
-fn heartbeat_request(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+// AfbVerbRegister!(HeartbeatRqt, heartbeat_request);
+fn heartbeat_request(rqt: &AfbRequest, args: &AfbRqtData, _ctx: &AfbCtxData) -> Result<(), AfbError> {
     let nonce = args.get::<u32>(0)?;
     afb_log_msg!(Debug, rqt, "Heartbeat request nonce:{}", nonce);
 
@@ -335,7 +351,8 @@ fn heartbeat_request(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
         "OCPP-SND",
         "Heartbeat",
         v106::Heartbeat::Request(query),
-        Box::new(HeartbeatRspCtx { nonce }),
+        heartbeat_response,
+        HeartbeatRspCtx { nonce },
     )?;
     Ok(())
 }
@@ -344,12 +361,13 @@ fn heartbeat_request(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
 struct AuthorizeRspCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(AuthorizeRsp, authorize_response, AuthorizeRspCtx);
+// AfbVerbRegister!(AuthorizeRsp, authorize_response, AuthorizeRspCtx);
 fn authorize_response(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut AuthorizeRspCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<AuthorizeRspCtx>()?;
     let data = args.get::<&v106::Authorize>(0)?;
     let response = match data {
         v106::Authorize::Response(response) => response,
@@ -377,12 +395,13 @@ fn authorize_response(
 struct AuthorizeRqtCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(AuthorizeRqt, authorize_request, AuthorizeRqtCtx);
+// AfbVerbRegister!(AuthorizeRqt, authorize_request, AuthorizeRqtCtx);
 fn authorize_request(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut AuthorizeRqtCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<AuthorizeRqtCtx>()?;
     let id_tag = args.get::<String>(0)?;
 
     afb_log_msg!(Debug, rqt, "Authorize request tag:{}", id_tag);
@@ -393,7 +412,8 @@ fn authorize_request(
         "OCPP-SND",
         "Authorize",
         v106::Authorize::Request(query),
-        Box::new(AuthorizeRspCtx { mgr: ctx.mgr }),
+        authorize_response,
+        AuthorizeRspCtx { mgr: ctx.mgr },
     )?;
     Ok(())
 }
@@ -403,12 +423,13 @@ struct TransacStartRspCtx {
     mgr: &'static ManagerHandle,
 }
 // reference: https://www.ampcontrol.io/ocpp-guide/how-to-start-an-ocpp-charging-session-with-starttransaction
-AfbVerbRegister!(TransacStartRsp, transac_start_rsp, TransacStartRspCtx);
+// AfbVerbRegister!(TransacStartRsp, transac_start_rsp, TransacStartRspCtx);
 fn transac_start_rsp(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut TransacStartRspCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<TransacStartRspCtx>()?;
     let data = args.get::<&v106::StartTransaction>(0)?;
     let response = match data {
         v106::StartTransaction::Response(response) => response,
@@ -435,12 +456,13 @@ fn transac_start_rsp(
 pub struct TransacStopRspCtx {
     pub mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(TransacStopRsp, transac_stop_rsp, TransacStopRspCtx);
+// AfbVerbRegister!(TransacStopRsp, transac_stop_rsp, TransacStopRspCtx);
 fn transac_stop_rsp(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut TransacStopRspCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<TransacStopRspCtx>()?;
     let data = args.get::<&v106::StopTransaction>(0)?;
     match data {
         v106::StopTransaction::Response(response) => response,
@@ -457,12 +479,13 @@ fn transac_stop_rsp(
 struct TransacRqtCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(TransacRequest, transaction_request, TransacRqtCtx);
+// AfbVerbRegister!(TransacRequest, transaction_request, TransacRqtCtx);
 fn transaction_request(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut TransacRqtCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<TransacRqtCtx>()?;
     let data = args.get::<&OcppTransaction>(0)?;
     match data {
         OcppTransaction::Start(tag) => {
@@ -481,7 +504,8 @@ fn transaction_request(
                 "OCPP-SND",
                 "StartTransaction",
                 v106::StartTransaction::Request(query),
-                Box::new(TransacStartRspCtx { mgr: ctx.mgr }),
+                transac_start_rsp,
+                TransacStartRspCtx { mgr: ctx.mgr },
             )?;
         }
         OcppTransaction::Stop(meter) => {
@@ -497,11 +521,12 @@ fn transaction_request(
             };
             afb_log_msg!(Debug, rqt, "Transaction Stop request {:?}", &query);
             AfbSubCall::call_async(
-                rqt,
+                rqt, 
                 "OCPP-SND",
                 "StopTransaction",
                 v106::StopTransaction::Request(query),
-                Box::new(TransacStopRspCtx { mgr: ctx.mgr }),
+                transac_stop_rsp,
+                TransacStopRspCtx { mgr: ctx.mgr },
             )?;
         }
     }
@@ -509,9 +534,12 @@ fn transaction_request(
     Ok(())
 }
 
+struct StatusNotificationRspCtx { // redundant
+}
+
 // StatusNotification async start response callback
-AfbVerbRegister!(StatusNotificationRsp, status_notification_rsp);
-fn status_notification_rsp(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbError> {
+// AfbVerbRegister!(StatusNotificationRsp, status_notification_rsp);
+fn status_notification_rsp(rqt: &AfbRequest, args: &AfbRqtData, _ctx: &AfbCtxData) -> Result<(), AfbError> {
     let data = args.get::<&v106::StatusNotification>(0)?;
     let _response = match data {
         v106::StatusNotification::Response(response) => response,
@@ -525,16 +553,13 @@ fn status_notification_rsp(rqt: &AfbRequest, args: &AfbData) -> Result<(), AfbEr
 struct StatusNotificationRqtCtx {
     mgr: &'static ManagerHandle,
 }
-AfbVerbRegister!(
-    StatusNotificationRqt,
-    status_notification_rqt,
-    StatusNotificationRqtCtx
-);
+// AfbVerbRegister!(StatusNotificationRqt, status_notification_rqt, StatusNotificationRqtCtx);
 fn status_notification_rqt(
     rqt: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut StatusNotificationRqtCtx,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<StatusNotificationRqtCtx>()?;
     // move from binding to ocpp status
     let status = args.get::<&OcppChargerStatus>(0)?;
     ctx.mgr.set_status(&status)?;
@@ -546,7 +571,8 @@ fn status_notification_rqt(
         "OCPP-SND",
         "StatusNotification",
         v106::StatusNotification::Request(query),
-        Box::new(StatusNotificationRsp {}),
+        status_notification_rsp,
+        StatusNotificationRspCtx {},
     )?;
     Ok(())
 }
@@ -555,12 +581,13 @@ struct SubscribeData {
     mgr: &'static ManagerHandle,
 }
 
-AfbVerbRegister!(SubscribeCtrl, subscribe_callback, SubscribeData);
+// AfbVerbRegister!(SubscribeCtrl, subscribe_callback, SubscribeData);
 fn subscribe_callback(
     request: &AfbRequest,
-    args: &AfbData,
-    ctx: &mut SubscribeData,
+    args: &AfbRqtData,
+    ctx: &AfbCtxData,
 ) -> Result<(), AfbError> {
+    let ctx = ctx.get_ref::<SubscribeData>()?;
     let subcription = args.get::<bool>(0)?;
     ctx.mgr.subscribe(request, subcription)?;
     request.reply(AFB_NO_DATA, 0);
@@ -569,44 +596,51 @@ fn subscribe_callback(
 
 pub(crate) fn register_frontend(api: &mut AfbApi, config: &BindingConfig) -> Result<(), AfbError> {
     let heartbeat_verb = AfbVerb::new("heartbeat")
-        .set_callback(Box::new(HeartbeatRqt {}))
+        .set_callback(heartbeat_request)
+        .set_context(v106::HeartbeatRequest {})
         .set_info("Request ping backend")
         .finalize()?;
 
     let authorize_verb = AfbVerb::new("authorize")
-        .set_callback(Box::new(AuthorizeRqtCtx { mgr: config.mgr }))
+        .set_callback(authorize_request)
+        .set_context(AuthorizeRqtCtx { mgr: config.mgr })
         .set_info("Request tagid authorization from backend")
         .set_usage("idTag")
         .finalize()?;
 
     let transaction_verb = AfbVerb::new("transaction")
-        .set_callback(Box::new(TransacRqtCtx { mgr: config.mgr }))
+        .set_callback(transaction_request)
+        .set_context(TransacRqtCtx { mgr: config.mgr })
         .set_info("send start/stop transaction to backend")
         .set_usage("'idTag'")
         .finalize()?;
 
     let status_notification_verb = AfbVerb::new("status-notification")
-        .set_callback(Box::new(StatusNotificationRqtCtx { mgr: config.mgr }))
+        .set_callback(status_notification_rqt)
+        .set_context(StatusNotificationRqtCtx { mgr: config.mgr })
         .set_info("Send status notification to backend")
-        .set_sample("'Charging'")?
-        .set_sample("'Available'")?
+        .add_sample("'Charging'")?
+        .add_sample("'Available'")?
         .set_usage("ocpp-status")
         .finalize()?;
 
     let engy_state_verb = AfbVerb::new("push-measure")
-        .set_callback(Box::new(EngyStateRqtCtx { mgr: config.mgr }))
+        .set_callback(engy_state_request)
+        .set_context(EngyStateRqtCtx { mgr: config.mgr })
         .set_info("mock engy state event")
         .finalize()?;
 
     let subscribe_verb = AfbVerb::new("subscribe")
-        .set_callback(Box::new(SubscribeCtrl { mgr: config.mgr }))
+        .set_callback(subscribe_callback)
+        .set_context(SubscribeData { mgr: config.mgr })
         .set_info("subscribe auth-msg event")
         .set_usage("true|false")
         .finalize()?;
 
     let monitor_handler = AfbEvtHandler::new("monitor-evt")
         .set_pattern("monitor/disconnected")
-        .set_callback(Box::new(MonitorEvtCtx { mgr: config.mgr }))
+        .set_callback(monitor_event_cb)
+        .set_context(MonitorEvtCtx { mgr: config.mgr })
         .finalize()?;
 
     // register veb within API
