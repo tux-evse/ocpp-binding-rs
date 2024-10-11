@@ -384,7 +384,8 @@ fn authorize_response(
                 "ocpp-authorize-start",
                 "fail auth:{:?}",
                 response.id_tag_info.status
-            )
+            );
+            ctx.mgr.authorized(false)?;
         }
     };
     rqt.reply(AFB_NO_DATA, 0);
