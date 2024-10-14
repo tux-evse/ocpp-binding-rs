@@ -383,12 +383,15 @@ fn authorize_response(
             return afb_error!(
                 "ocpp-authorize-start",
                 "fail auth:{:?}",
-                response.id_tag_info.status
+                response.id_tag_info.status  
             );
             ctx.mgr.authorized(false)?;
+            afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_1 ");
         }
     };
+    afb_log_msg!(Notice,None,"CHECK_TAG_ID_ERROR");
     rqt.reply(AFB_NO_DATA, 0);
+    afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_2 ");
     Ok(())
 }
 
