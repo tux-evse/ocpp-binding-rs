@@ -385,13 +385,14 @@ fn authorize_response(
                 "fail auth:{:?}",
                 response.id_tag_info.status  
             );
-            ctx.mgr.authorized(false)?;
+            afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_0 ");
+            ctx.mgr.authorized(false);
             afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_1 ");
         }
     };
-    afb_log_msg!(Notice,None,"CHECK_TAG_ID_ERROR");
+    afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_2");
     rqt.reply(AFB_NO_DATA, 0);
-    afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_2 ");
+    afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_3 ");
     Ok(())
 }
 
