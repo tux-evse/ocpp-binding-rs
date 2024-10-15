@@ -379,6 +379,10 @@ fn authorize_response(
             afb_log_msg!(Debug, rqt, "ocpp-authorize-done");
             ctx.mgr.authorized(true)?;
         }
+        v106::AuthorizationStatus::Blocked => {
+            afb_log_msg!(Debug, rqt, "ocpp-authorize-blocked");
+            ctx.mgr.authorized(false)?;
+        }
         _ => {
             return afb_error!(
                 "ocpp-authorize-start",
