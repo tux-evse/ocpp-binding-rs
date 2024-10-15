@@ -381,6 +381,7 @@ fn authorize_response(
         }
         v106::AuthorizationStatus::Blocked => {
             afb_log_msg!(Debug, rqt, "ocpp-authorize-blocked");
+            afb_log_msg!(Notice,None,"CHECK_Blocked");
             ctx.mgr.authorized(false)?;
         }
         _ => {
@@ -389,9 +390,6 @@ fn authorize_response(
                 "fail auth:{:?}",
                 response.id_tag_info.status  
             );
-            afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_0 ");
-            ctx.mgr.authorized(false);
-            afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_1 ");
         }
     };
     afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_2");
