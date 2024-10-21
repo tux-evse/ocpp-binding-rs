@@ -374,15 +374,15 @@ fn authorize_response(
         _ => return afb_error!("ocpp-authorize-start", "invalid response type"),
     };
 
+    let ocpp_auth_state;
     match response.id_tag_info.status {
         v106::AuthorizationStatus::Accepted => {
             afb_log_msg!(Debug, rqt, "ocpp-authorize-done");
-            ctx.mgr.authorized(true)?;
+            ocpp_auth_state = ctx.mgr.authorized(true)?;
         }
         v106::AuthorizationStatus::Blocked => {
             afb_log_msg!(Debug, rqt, "ocpp-authorize-blocked");
-            afb_log_msg!(Notice,None,"CHECK_Blocked");
-            ctx.mgr.authorized(false)?;
+            ocpp_auth_state = ctx.mgr.authorized(false)?;
         }
         _ => {
             return afb_error!(
@@ -393,7 +393,8 @@ fn authorize_response(
         }
     };
     afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_2");
-    rqt.reply(AFB_NO_DATA, 0);
+    afb_log_msg!(Notice,None,"OCPP AUTH STATE: {}", ocpp_auth_state);
+    rqt.reply(ocpp_auth_state, 0);
     afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_3 ");
     Ok(())
 }

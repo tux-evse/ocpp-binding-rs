@@ -87,11 +87,12 @@ impl ManagerHandle {
         Ok(data_set.tid)
     }
 
-    pub fn authorized(&self, authorized: bool) -> Result<(), AfbError> {
+    pub fn authorized(&self, authorized: bool) -> Result<bool, AfbError> {
         let mut data_set = self.get_state()?;
         self.event.push(OcppMsg::Authorized(authorized));
         data_set.authorized = authorized;
-        Ok(())
+        afb_log_msg!(Debug, self.event, "::::::OCPP authorization status: {}:::::::", authorized);
+        Ok(data_set.authorized)
     }
 
     pub fn login(&self, tid: i32) -> Result<(), AfbError> {
