@@ -91,7 +91,6 @@ impl ManagerHandle {
         let mut data_set = self.get_state()?;
         self.event.push(OcppMsg::Authorized(authorized));
         data_set.authorized = authorized;
-        afb_log_msg!(Debug, self.event, "::::::OCPP authorization status: {}:::::::", authorized);
         Ok(data_set.authorized)
     }
 

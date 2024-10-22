@@ -392,10 +392,8 @@ fn authorize_response(
             );
         }
     };
-    afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_2");
     afb_log_msg!(Notice,None,"OCPP AUTH STATE: {}", ocpp_auth_state);
     rqt.reply(ocpp_auth_state, 0);
-    afb_log_msg!(Notice,None,"CHECK_OCPP_AUTHORIZE_3 ");
     Ok(())
 }
 
